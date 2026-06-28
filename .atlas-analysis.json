@@ -1,0 +1,142 @@
+{
+  "projectType": "sdk-library",
+  "projectName": "Context Fabric",
+  "projectDescription": "A Python library and MCP server that exposes graph-annotated biblical and religious text corpora to AI assistants and developers via 11 queryable tools built on Context-Fabric and FastMCP.",
+  "theme": "luma",
+  "primaryColor": "#cca46c",
+  "lightColor": null,
+  "darkColor": null,
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "installation"
+            ]
+          },
+          {
+            "group": "MCP Server",
+            "pages": [
+              "mcp/overview",
+              "mcp/transports",
+              "mcp/multi-corpus",
+              "mcp/workflow"
+            ]
+          },
+          {
+            "group": "Corpus Management",
+            "pages": [
+              "corpus/datasets",
+              "corpus/fetch-from-git",
+              "corpus/epub-to-tf",
+              "corpus/html-to-tf",
+              "corpus/exg-format"
+            ]
+          },
+          {
+            "group": "Authentication",
+            "pages": [
+              "auth/overview",
+              "auth/sign-in",
+              "auth/sign-up"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "configuration/environment",
+              "configuration/settings"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "MCP Tools",
+            "pages": [
+              "api/tools/list-corpora",
+              "api/tools/describe-corpus",
+              "api/tools/list-features",
+              "api/tools/describe-feature",
+              "api/tools/get-text-formats",
+              "api/tools/search",
+              "api/tools/search-continue",
+              "api/tools/search-csv",
+              "api/tools/search-syntax-guide",
+              "api/tools/get-passages",
+              "api/tools/get-node-features"
+            ]
+          },
+          {
+            "group": "Python API",
+            "pages": [
+              "api/corpus-manager",
+              "api/converters",
+              "api/auth-api",
+              "api/models"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "FastMCP server exposing 11 corpus query tools to AI assistants (Claude, GPT, etc.)",
+    "Support for Bible (BHSA, GNT), Quran, Tanakh, commentaries, lexicons, and dictionaries",
+    "Graph-based annotated text queries using Context-Fabric (fork of Text-Fabric)",
+    "EPUB and HTML to Text-Fabric dataset converters for importing custom books",
+    "Git-based corpus dataset fetching (shallow clone + TF directory discovery)",
+    "Multi-corpus support with named corpora and cursor-based search pagination",
+    "SSE, streamable HTTP, and stdio transport modes for different client types",
+    "Supabase-backed authentication with anonymous, email OTP, and OIDC (Apple/Google) flows",
+    "Pydantic-settings configuration with per-environment .env files",
+    ".exg packaging format for distributable corpus bundles"
+  ],
+  "publicApiSurface": [
+    "cf-mcp CLI entrypoint (--corpus, --name, --sse, --http, --host, --features, --verbose)",
+    "exegia.mcp.mcp — FastMCP server instance",
+    "exegia.mcp.corpus_manager — CorpusManager singleton",
+    "CorpusManager.load(path, name, features)",
+    "CorpusManager.get_api(name)",
+    "CorpusManager.list_corpora()",
+    "CorpusManager.select(name)",
+    "CorpusManager.unload(name)",
+    "MCP tool: list_corpora()",
+    "MCP tool: describe_corpus(corpus?)",
+    "MCP tool: list_features(node_type?, kind?, limit?, corpus?)",
+    "MCP tool: describe_feature(feature, sample_size?, corpus?)",
+    "MCP tool: get_text_formats(corpus?)",
+    "MCP tool: search(template, return_type?, limit?, fmt?, corpus?)",
+    "MCP tool: search_continue(cursor_id, limit?)",
+    "MCP tool: search_csv(template, output_path, features?, corpus?)",
+    "MCP tool: search_syntax_guide(section?)",
+    "MCP tool: get_passages(references, fmt?, corpus?)",
+    "MCP tool: get_node_features(nodes, features, corpus?)",
+    "exegia.corpus.fetch_from_git.fetch_datasets_from_git(git_url, temp_base?)",
+    "exegia.utils.convert_epub_to_tf.convert_epub_to_tf(epub_path, output_dir, corpus_name?, version?, tokenize?, on_progress?)",
+    "exegia.utils.convert_epub_to_tf.EPUBToTFConverter",
+    "exegia.utils.convert_html_to_tf.convert_html_to_tf(input_dir, output_dir, corpus_name?, version?, advanced?, **kwargs)",
+    "exegia.utils.convert_epub_to_xml.convert_epub_to_tei(epub_path, output_path?)",
+    "exegia.utils.convert_to_exg.convert_to_exg(dataset_dir, destination)",
+    "exegia.auth.signin.sign_in_with_id_token(provider, token, ...)",
+    "exegia.auth.signin.request_email_otp(email, ...)",
+    "exegia.auth.signin.verify_email_otp(email, token, ...)",
+    "exegia.auth.signup.sign_up(access_token?, profile_fields?, anonymous?, ...)",
+    "exegia.auth.signup.start_anonymous_session(data?, captcha_token?)",
+    "exegia.auth.signup.create_user_profile(user_id, fields?)",
+    "exegia.auth.current_user.get_current_user_record(access_token)",
+    "exegia.auth.current_user.get_profile(user_id)",
+    "exegia.auth.current_user.link_identity_to_current_user(access_token, provider, ...)",
+    "exegia.auth.current_user.CurrentUser dataclass",
+    "exegia.models.enums.BookCategory",
+    "exegia.models.enums.BookSourceType",
+    "exegia.models.enums.SectionType"
+  ]
+}

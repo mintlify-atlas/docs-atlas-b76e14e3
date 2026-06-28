@@ -1,0 +1,68 @@
+---
+title: "search_syntax_guide(): Query template syntax docs"
+sidebarTitle: "search_syntax_guide"
+description: "Returns built-in documentation for Context-Fabric query template syntax. Optionally scoped to a section: nodes, relations, quantifiers, or examples."
+---
+
+`search_syntax_guide()` returns the built-in reference documentation for the Context-Fabric / Text-Fabric query template language used by `search()` and `search_csv()`. Without arguments it returns the complete guide; pass a `section` name to retrieve only that chapter. Use this whenever you need a reminder of feature condition operators, relation keywords, quantifier blocks, or worked examples.
+
+## Parameters
+
+<ParamField query="section" type="string">
+  Name of the documentation section to return. When omitted, the full guide is returned. Valid values:
+
+  - `"nodes"` — Node line syntax: node types, feature conditions, comparison operators, and containment via indentation.
+  - `"relations"` — Relation keywords between two node lines: adjacency, ordering, overlap, and edge traversal.
+  - `"quantifiers"` — Quantifier blocks: `/without/`, `/where/`, `/have/`, `/with/`, `/or/`.
+  - `"examples"` — Annotated worked examples covering common query patterns.
+</ParamField>
+
+## Returns
+
+A plain-text string containing the requested documentation. When `section` is omitted, all four sections are concatenated, each preceded by a `=== SECTION ===` header.
+
+Returns `"Unknown section '<name>'. Available: nodes, relations, quantifiers, examples"` when an unrecognised section name is supplied.
+
+## Example
+
+```python
+# Get just the nodes section
+guide = search_syntax_guide(section="nodes")
+print(guide)
+```
+
+Expected output:
+
+```
+Node lines
+----------
+Each line names a node type, with optional feature conditions:
+
+  word                       # any word
+  word lex=happy             # word where lex == "happy"
+  word lex~happ              # word where lex matches regex happ
+  word pos#verb              # word where pos != "verb"
+  word gloss<abc             # word where gloss < "abc" (string compare)
+  word freq>100              # word where freq > 100 (numeric)
+  word ?lex                  # word where lex is defined (not null)
+
+Indentation signals containment:
+  verse
+    word pos=verb            # verse containing a verb
+```
+
+```python
+# Get the full guide
+full = search_syntax_guide()
+print(full[:200])  # first 200 chars
+```
+
+Expected output (truncated):
+
+```
+=== NODES ===
+Node lines
+----------
+Each line names a node type, with optional feature conditions:
+...
+```

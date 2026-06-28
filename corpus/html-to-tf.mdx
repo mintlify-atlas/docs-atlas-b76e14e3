@@ -1,0 +1,134 @@
+---
+title: "Convert HTML Documents to Text-Fabric Datasets"
+sidebarTitle: "HTML to TF"
+description: "convert_html_to_tf() converts a directory of HTML files into a Text-Fabric dataset with document→element→word nodes, with an advanced mode for semantic structure."
+---
+
+The `convert_html_to_tf` function converts a directory of `.html` or `.htm` files into a Text-Fabric dataset. It supports two modes: a basic mode that produces a flat `document → element → word` hierarchy, and an advanced mode that promotes semantic block elements — paragraphs, links, and tables — to distinct, queryable node types. Both modes store HTML attributes as TF features on every node.
+
+## Node Hierarchies
+
+**Basic mode** (default, `advanced=False`) — all HTML tags become generic `element` nodes:
+
+```
+document
+  element      (any HTML tag)
+    word       (slot)
+```
+
+**Advanced mode** (`advanced=True`) — semantic elements get their own node types:
+
+```
+document
+  paragraph    (p, div, section, article)
+  link         (a)
+  table
+    row
+      cell
+        word   (slot)
+```
+
+## Function Signature
+
+```python
+from exegia.utils.convert_html_to_tf import convert_html_to_tf
+
+def convert_html_to_tf(
+    input_dir: str | Path,
+    output_dir: str | Path,
+    corpus_name: str = "HTMLCorpus",
+    version: str = "1.0",
+    advanced: bool = False,
+    **kwargs,
+) -> Path:
+    ...
+```
+
+## Parameters
+
+<ParamField path="input_dir" type="str | Path" required>
+  Directory containing `.html` or `.htm` source files. The converter processes all matching files sorted by filename.
+</ParamField>
+
+<ParamField path="output_dir" type="str | Path" required>
+  Directory where the generated `.tf` files will be written. Created automatically if it does not exist.
+</ParamField>
+
+<ParamField path="corpus_name" type="str">
+  Name assigned to the corpus in the TF metadata. Default: `"HTMLCorpus"`.
+</ParamField>
+
+<ParamField path="version" type="str">
+  Version string embedded in the TF metadata. Default: `"1.0"`.
+</ParamField>
+
+<ParamField path="advanced" type="bool">
+  When `True`, uses `AdvancedHTMLToTFConverter`, which promotes `p`, `div`, `section`, `article`, `a`, `table`, `tr`, `td`/`th` to their own node types and also extracts `<title>` and `<meta>` tags as document-level features. Default: `False`.
+</ParamField>
+
+<ParamField path="tokenize" type="bool">
+  Passed via `**kwargs`. When `True` (default), text is split on whitespace and each word becomes a separate slot. When `False`, each contiguous text run is emitted as a single slot.
+</ParamField>
+
+<ParamField path="preserve_whitespace" type="bool">
+  Passed via `**kwargs`. When `True`, whitespace inside text nodes is preserved as-is. When `False` (default), runs of whitespace are collapsed to a single space before tokenisation.
+</ParamField>
+
+## Returns
+
+`Path` — the path to the generated TF directory.
+
+## Basic Example
+
+```python
+from exegia.utils.convert_html_to_tf import convert_html_to_tf
+
+tf_path = convert_html_to_tf(
+    input_dir="html_files/",
+    output_dir="~/.exegia/datasets/docs/my-corpus/",
+    corpus_name="MyDocs",
+)
+print(f"Dataset created at: {tf_path}")
+```
+
+## Advanced Mode
+
+Use `advanced=True` when your HTML has meaningful block structure that you want to query as typed nodes:
+
+```python
+tf_path = convert_html_to_tf(
+    input_dir="html_files/",
+    output_dir="~/.exegia/datasets/docs/my-corpus/",
+    corpus_name="MyDocs",
+    advanced=True,
+)
+```
+
+In advanced mode the converter also reads `<title>` and `<meta>` tags from the document `<head>` and stores them as features on the `document` node (e.g. `title`, `meta_description`, `meta_author`).
+
+## Features Stored on Nodes
+
+| Feature | Description |
+|---|---|
+| `tag` | HTML tag name |
+| `class` | CSS class names |
+| `id` | HTML `id` attribute |
+| `href` | Link URL |
+| `src` | Source URL |
+| `alt` | Alt text |
+| `title` | `title` attribute |
+| `text` | Word text (on `word` nodes) |
+| `filename` | Source HTML filename |
+| `depth` | Nesting depth in HTML |
+
+Any other HTML attribute encountered during the walk is also stored as a feature, with hyphens in attribute names replaced by underscores (e.g. `data-verse` → `data_verse`).
+
+## Load the Result
+
+```bash
+uv run cf-mcp --corpus ~/.exegia/datasets/docs/my-corpus
+```
+
+<Tip>
+  Use `advanced=True` when your HTML has semantic block structure — paragraphs, tables, links — that you want to query as distinct node types. Basic mode is faster and sufficient when you only need full-text search across words.
+</Tip>

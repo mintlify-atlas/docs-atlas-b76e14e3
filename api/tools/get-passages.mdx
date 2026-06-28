@@ -1,0 +1,52 @@
+---
+title: "get_passages(): Retrieve text by section reference"
+sidebarTitle: "get_passages"
+description: "Fetches rendered text passages for a list of section references such as 'Genesis 1:1'. Accepts up to 100 references and an optional text format name."
+---
+
+`get_passages()` looks up sections of the corpus by human-readable reference strings and returns their rendered text. It is the direct way to read corpus text when you already know which verses, chapters, or books you want — for example after collecting references from `search()` results or after reading a `cursor_id` page. You can retrieve up to **100 references** per call. Pass a `fmt` name from `get_text_formats()` to control the rendering (original script, transliteration, etc.).
+
+## Parameters
+
+<ParamField query="references" type="string[]" required>
+  List of section reference strings to retrieve. The format is `"Book Chapter:Verse"` for verse-level access, `"Book Chapter"` for chapter-level, or `"Book"` for book-level — matching the section hierarchy of the corpus. Examples: `["Genesis 1:1", "John 3:16", "Psalms 23:1"]`. Maximum **100** references per call; any beyond the hundredth are silently ignored.
+</ParamField>
+
+<ParamField query="fmt" type="string">
+  Text rendering format (e.g. `"text-orig-full"`, `"text-trans-plain"`). When omitted, the corpus default format is used. Retrieve valid names with `get_text_formats()`.
+</ParamField>
+
+<ParamField query="corpus" type="string">
+  Corpus name. When omitted, the currently active corpus is used.
+</ParamField>
+
+## Returns
+
+A string with one block per reference, separated by blank lines. Each block begins with the reference in square brackets on its own line, followed by the rendered text of that section:
+
+```
+[Genesis 1:1]
+בְּרֵאשִׁ֖ית בָּרָ֣א אֱלֹהִ֑ים אֵ֥ת הַשָּׁמַ֖יִם וְאֵ֥ת הָאָֽרֶץ׃
+```
+
+When a reference cannot be parsed, the block reads `[ref] — could not parse reference`. When a valid reference is not found in the corpus, the block reads `[ref] — not found in corpus`. Returns `"No passages found."` if the `references` list is empty or all references fail.
+
+## Example
+
+```python
+result = get_passages(
+    references=["Genesis 1:1", "Genesis 1:2"],
+    fmt="text-orig-full",
+)
+print(result)
+```
+
+Expected output:
+
+```
+[Genesis 1:1]
+בְּרֵאשִׁ֖ית בָּרָ֣א אֱלֹהִ֑ים אֵ֥ת הַשָּׁמַ֖יִם וְאֵ֥ת הָאָֽרֶץ׃
+
+[Genesis 1:2]
+וְהָאָ֗רֶץ הָיְתָ֥ה תֹ֙הוּ֙ וָבֹ֔הוּ וְחֹ֖שֶׁךְ עַל־פְּנֵ֣י תְהֹ֑ום
+```

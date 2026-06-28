@@ -1,0 +1,93 @@
+---
+title: "Settings API: Accessing Configuration in Python Code"
+sidebarTitle: "Settings API"
+description: "Access all configuration constants via the Settings class or module-level exports from exegia.utils.constant. Backed by pydantic-settings with .env file support."
+---
+
+All configuration is available via the `Settings` class and pre-resolved constants in `exegia.utils.constant`. The module resolves the correct `.env` file at import time and exposes every value as a typed attribute — no manual `os.getenv()` calls needed in application code.
+
+## Importing Settings
+
+Use `settings` (the module-level singleton) for the common case, or call `get_settings()` explicitly when you need the factory:
+
+```python
+from exegia.utils.constant import settings, get_settings
+
+# Module-level cached singleton
+print(settings.environment)  # "development"
+print(settings.supabase_url) # your project URL
+
+# Or call the factory directly
+s = get_settings()
+print(s.project_ref)
+```
+
+## Available Constants
+
+All constants below are importable directly from `exegia.utils.constant`. They are resolved once at import time from the active `Settings` instance.
+
+```python
+from exegia.utils.constant import (
+    SUPABASE_API_URL,
+    SUPABASE_PUBLISHABLE_KEY,
+    SUPABASE_SECRET_KEY,
+    SUPABASE_STORAGE_BUCKET,
+    SUPABASE_DB_URL,
+    SUPABASE_DB_PASSWORD,
+    SUPABASE_DB_USER,
+    SUPABASE_STORAGE_ACCESS_KEY,
+    SUPABASE_STORAGE_SECRET_KEY,
+    ENVIRONMENT,
+    CORS_ORIGINS,
+    CORS_ORIGINS_LIST,
+    OPENAI_KEY,
+    PROJECT_REF,
+    PROJECT_ROOT,
+    DEVELOPMENT_TEAM,
+    APPLE_TEAM_ID,
+)
+```
+
+## Settings Class Fields
+
+The `Settings` class extends `pydantic_settings.BaseSettings`. Fields map directly to environment variable names.
+
+| Field | Type | Env Variable | Default |
+|---|---|---|---|
+| `supabase_url` | `str` | `SUPABASE_URL` | `""` |
+| `supabase_storage_bucket` | `str` | — | `"corpora"` |
+| `supabase_publishable_key` | `str` | `SUPABASE_PUBLISHABLE_KEY` | `""` |
+| `supabase_secret_key` | `str` | `SUPABASE_SECRET_KEY` | `""` |
+| `project_ref` | `str` | `PROJECT_REF` | `""` |
+| `supabase_db_url` | `str` | `SUPABASE_DB_URL` | `""` |
+| `environment` | `str` | `ENVIRONMENT` | `"development"` |
+| `cors_origins` | `str` | `CORS_ORIGINS` | `""` |
+| `open_ai_key` | `str` | `OPENAI_KEY` | `""` |
+
+## `cors_origins_list` Property
+
+The `cors_origins_list` property parses the raw `CORS_ORIGINS` string into a Python list, stripping whitespace around each entry:
+
+```python
+from exegia.utils.constant import settings
+
+# If CORS_ORIGINS="https://app.example.com, https://admin.example.com"
+print(settings.cors_origins_list)
+# ["https://app.example.com", "https://admin.example.com"]
+```
+
+An empty or unset `CORS_ORIGINS` returns an empty list.
+
+## Local Supabase with OrbStack
+
+When running Supabase locally using OrbStack, `SUPABASE_URL` is not read from the environment directly for internal routing. Instead, the `SUPABASE_API_URL` constant and database host are constructed automatically from `PROJECT_REF`:
+
+- **API (Kong gateway):** `https://supabase_kong_{PROJECT_REF}.orb.local`
+- **Database host:** `supabase_db_{PROJECT_REF}.orb.local`
+- **Studio URL:** `supabase_studio_{PROJECT_REF}.orb.local`
+
+Set `PROJECT_REF` in your `.env.development` file to match your local Supabase container name.
+
+<Tip>
+  `get_settings()` is wrapped with `lru_cache(maxsize=1)`, so the `Settings` object is constructed exactly once per process. The module-level `settings` singleton calls `get_settings()` at import time. If you change environment variables after the module has been imported, the cached instance will not pick up the new values — restart the process to reload the configuration.
+</Tip>

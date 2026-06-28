@@ -1,0 +1,56 @@
+---
+title: "describe_corpus(): Corpus structure overview"
+sidebarTitle: "describe_corpus"
+description: "Returns the section hierarchy, total feature count, and a frequency table of node types for a corpus. Defaults to the currently active corpus."
+---
+
+`describe_corpus()` gives you a structural overview of a corpus before you start querying it. It shows the section hierarchy (e.g. `book > chapter > verse`), the total number of loaded features, and a frequency table of every node type with its total count. Use it to understand what kinds of nodes are available and how the text is organised into sections.
+
+## Parameters
+
+<ParamField query="corpus" type="string">
+  Name of the corpus to describe. When omitted, the currently active corpus is used. Use `list_corpora()` to see available names.
+</ParamField>
+
+## Returns
+
+A multi-line formatted string containing three sections:
+
+- **Section hierarchy** — node types that form the hierarchical address system, separated by `>`.
+- **Total features** — number of features loaded for the corpus.
+- **Node types table** — a two-column table with each node type and its total count, formatted with commas.
+
+```
+Section hierarchy: book > chapter > verse
+Total features: 80
+
+Node types:
+Type                       Count
+----------------------------------
+word               426,584
+verse               23,213
+chapter              1,189
+book                    39
+```
+
+## Example
+
+```python
+result = describe_corpus(corpus="BHSA")
+print(result)
+```
+
+Expected output:
+
+```
+Section hierarchy: book > chapter > verse
+Total features: 80
+
+Node types:
+Type                       Count
+----------------------------------
+word               426,584
+verse               23,213
+chapter              1,189
+book                    39
+```

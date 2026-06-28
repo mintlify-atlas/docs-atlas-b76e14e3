@@ -1,0 +1,47 @@
+---
+title: "search_continue(): Paginate search results"
+sidebarTitle: "search_continue"
+description: "Retrieves the next page of results from a previous search() call using a cursor_id. Returns up to 100 results per call. Cursor expires after 5 minutes."
+---
+
+`search_continue()` fetches the next batch of results from a search that produced more matches than `search()` returned in its first page. You pass the `cursor_id` that `search()` included in its response, and the tool advances the cursor forward by `limit` positions. Call it repeatedly until you see `"End of results."` or until you have collected all the results you need. The cursor is server-side and expires automatically after **5 minutes** of inactivity; if it expires you must re-run `search()`.
+
+## Parameters
+
+<ParamField query="cursor_id" type="string" required>
+  The cursor identifier returned by a previous `search()` call in `"results"` mode. It is a UUID string (e.g. `"3f2a1b4c-8d9e-4f0a-b1c2-d3e4f5a6b7c8"`).
+</ParamField>
+
+<ParamField query="limit" type="integer">
+  How many results to return in this page. Clamped to the range `1–100`. Defaults to `20`.
+</ParamField>
+
+## Returns
+
+A formatted string of numbered result lines, each showing the pipe-separated section references for one matched node tuple. The result number continues from where the previous page ended. A footer line indicates how many results remain:
+
+- If more results exist: `"N more. cursor_id: <id>"`
+- If this is the last page: `"End of results."`
+
+Returns `"Cursor expired or not found. Run search() again."` when the `cursor_id` is unknown or has expired. Returns `"No more results."` if the cursor had already been exhausted on a prior call.
+
+## Example
+
+```python
+# First page
+first = search(template="word pos=verb", limit=5)
+# Extract cursor_id from the response, then continue
+second = search_continue(cursor_id="3f2a1b4c-8d9e-4f0a-b1c2-d3e4f5a6b7c8", limit=5)
+print(second)
+```
+
+Expected output:
+
+```
+     6. Genesis 1 6
+     7. Genesis 1 8
+     8. Genesis 1 9
+     9. Genesis 1 11
+    10. Genesis 1 12
+34,601 more. cursor_id: 3f2a1b4c-8d9e-4f0a-b1c2-d3e4f5a6b7c8
+```

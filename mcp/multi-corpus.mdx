@@ -1,0 +1,87 @@
+---
+title: "Loading Multiple Corpora in One MCP Server Session"
+sidebarTitle: "Multi-Corpus"
+description: "cf-mcp supports loading multiple named corpora simultaneously. Switch the active corpus per query or target specific corpora in each tool call."
+---
+
+A single `cf-mcp` process can hold multiple corpora in memory at the same time. You can load them at startup with repeated `--corpus` flags, give each one a short name, and then target any of them in individual tool calls without restarting the server or changing the global default.
+
+## CLI: Multiple --corpus Flags
+
+Repeat `--corpus` for each dataset you want to load. Pair each path with an optional `--name` flag to give it a human-readable identifier:
+
+```bash
+uv run cf-mcp \
+  --corpus ~/.exegia/datasets/bibles/BHSA --name BHSA \
+  --corpus ~/.exegia/datasets/bibles/GNT  --name GNT
+```
+
+`--name` flags are matched positionally to `--corpus` flags — the first `--name` applies to the first `--corpus`, and so on. If a `--name` is omitted for a given path, the name defaults to the directory's base name.
+
+## --features Flag
+
+To speed up startup, pass `--features` with a list of feature names to load only the annotations you need. This is particularly useful for large corpora with dozens of features when your workflow only requires a subset:
+
+```bash
+uv run cf-mcp \
+  --corpus ~/.exegia/datasets/bibles/BHSA \
+  --features lex pos gloss
+```
+
+<Tip>
+  Load a small subset of features with `--features` to speed up startup when you only need specific annotations.
+</Tip>
+
+## Programmatic Multi-Corpus
+
+When embedding the server in Python, call `corpus_manager.load()` once per corpus before calling `mcp.run()`. The first corpus loaded automatically becomes the default:
+
+```python
+from exegia.mcp import corpus_manager, mcp
+
+corpus_manager.load("~/.exegia/datasets/bibles/BHSA", name="BHSA")
+corpus_manager.load("~/.exegia/datasets/bibles/GNT",  name="GNT")
+
+# First loaded corpus is the default
+print(corpus_manager.current)       # "BHSA"
+print(corpus_manager.list_corpora()) # ["BHSA", "GNT"]
+
+# Switch the active corpus
+corpus_manager.select("GNT")
+
+mcp.run(transport="stdio")
+```
+
+## Using the corpus Parameter in Tools
+
+Every one of the 11 MCP tools accepts an optional `corpus` parameter. Passing it directs that single call to the named corpus without changing the global default — useful when an AI agent needs to compare results across datasets in the same conversation:
+
+```
+search(template="word pos=verb", corpus="GNT")
+get_passages(references=["John 3:16"], corpus="GNT")
+describe_corpus(corpus="BHSA")
+```
+
+If `corpus` is omitted, the tool uses whichever corpus is currently set as the default.
+
+## list_corpora Tool Output
+
+The `list_corpora` tool shows all loaded corpora and marks the active one with an asterisk:
+
+```
+Loaded corpora (* = current):
+  * BHSA
+    GNT
+```
+
+## CorpusManager API Reference
+
+| Method | Signature | Returns |
+|---|---|---|
+| `load` | `load(path, name?, features?)` | `str` — the corpus name |
+| `get_api` | `get_api(name?)` | Context-Fabric TF API object |
+| `list_corpora` | `list_corpora()` | `list[str]` |
+| `select` | `select(name)` | `None` |
+| `unload` | `unload(name)` | `None` |
+
+`get_api()` with no argument returns the API for the currently active corpus. After `unload()`, the active corpus is automatically advanced to the next loaded corpus, or set to `None` if the last corpus was removed.

@@ -1,0 +1,108 @@
+---
+title: "Corpus Datasets: Supported Texts and Storage Layout"
+sidebarTitle: "Datasets"
+description: "Context Fabric supports biblical, religious, and custom text corpora as Text-Fabric datasets stored locally under ~/.exegia/datasets/. Learn the layout and supported types."
+---
+
+Corpora in Context Fabric are Text-Fabric dataset directories stored on your local filesystem. The MCP server loads one or more of these directories at startup from the path(s) you provide via the `--corpus` flag or the programmatic `corpus_manager.load()` call. Each dataset is a self-contained folder of annotated `.tf` feature files that the graph engine indexes at load time.
+
+## Dataset Format
+
+A Text-Fabric dataset directory is any folder that contains both `otext.tf` and `otype.tf` side by side. These two files are mandatory:
+
+- **`otext.tf`** — defines corpus-level metadata (name, version, description, section hierarchy, text formats).
+- **`otype.tf`** — maps every node in the graph to its type (e.g. `word`, `verse`, `chapter`, `book`).
+
+All other `.tf` files in the directory are feature files that store annotations on nodes (morphology, lemma, gloss, etc.).
+
+## Recommended Directory Layout
+
+Organise datasets by category under `~/.exegia/datasets/` for clarity. Context Fabric does not enforce this structure, but it makes multi-corpus setups easy to manage:
+
+```
+~/.exegia/datasets/
+├── bibles/
+│   ├── BHSA/           # BHS Hebrew with Annotations
+│   │   ├── otext.tf
+│   │   ├── otype.tf
+│   │   └── *.tf
+│   └── GNT/            # Greek New Testament
+├── commentaries/
+│   └── my-commentary/
+└── books/
+    └── my-epub-book/
+```
+
+## Supported Corpus Categories
+
+The `BookCategory` enum defines the recognised corpus types. You can use these values when tagging or filtering corpora in your application:
+
+| Category | Value | Description |
+|---|---|---|
+| Bible | `bible` | Old/New Testament texts |
+| Quran | `quran` | Arabic or translated Quran |
+| Tanakh | `tanakh` | Hebrew Bible |
+| Commentary | `commentary` | Rabbinical, patristic, etc. |
+| Lexicon | `lexicon` | Lexical databases (BDB, BDAG) |
+| Dictionary | `dictionary` | Theological dictionaries |
+| Devotional | `devotional` | Devotional literature |
+| Theology | `theology` | Systematic theology |
+| History | `history` | Historical texts |
+| Philosophy | `philosophy` | Philosophical works |
+| Fiction | `fiction` | Literary texts |
+| Other | `other` | Catch-all |
+
+```python
+from exegia.models.enums import BookCategory
+
+category = BookCategory.COMMENTARY  # "commentary"
+```
+
+## Loading a Dataset
+
+Pass a dataset path directly to the `cf-mcp` entrypoint, or load it programmatically with `corpus_manager`:
+
+```bash
+# CLI — stdio mode (for Claude Desktop and other MCP clients)
+uv run cf-mcp --corpus ~/.exegia/datasets/bibles/BHSA
+
+# Load multiple corpora at once
+uv run cf-mcp \
+  --corpus ~/.exegia/datasets/bibles/BHSA --name BHSA \
+  --corpus ~/.exegia/datasets/bibles/GNT  --name GNT
+```
+
+```python
+# Python — programmatic usage
+from exegia.mcp import mcp, corpus_manager
+
+corpus_manager.load("~/.exegia/datasets/bibles/BHSA", name="BHSA")
+mcp.run(transport="stdio")
+```
+
+## Where to Obtain Datasets
+
+Well-known public Text-Fabric datasets you can fetch directly from git:
+
+- **BHSA** (BHS Hebrew Bible with Annotations): [github.com/ETCBC/bhsa](https://github.com/ETCBC/bhsa)
+- **GNT** (Greek New Testament): various Text-Fabric repositories on GitHub
+- **Custom books**: use the EPUB or HTML converters to create your own datasets
+
+See [Fetch from Git](/corpus/fetch-from-git) for how to clone a public repository and locate its dataset directories automatically.
+
+---
+
+<CardGroup cols={2}>
+  <Card title="Fetch from Git" icon="code-branch" href="/corpus/fetch-from-git">
+    Shallow-clone a git repository and locate all Text-Fabric datasets inside it automatically.
+  </Card>
+  <Card title="Convert EPUB" icon="book-open" href="/corpus/epub-to-tf">
+    Turn any EPUB ebook into a queryable Text-Fabric dataset with a full node hierarchy.
+  </Card>
+  <Card title="Convert HTML" icon="file-code" href="/corpus/html-to-tf">
+    Convert a directory of HTML files into a Text-Fabric dataset with document and element nodes.
+  </Card>
+  <Card title="Package as .exg" icon="box-archive" href="/corpus/exg-format">
+    Bundle a Text-Fabric dataset into a single distributable .exg archive with manifest metadata.
+  </Card>
+</CardGroup>

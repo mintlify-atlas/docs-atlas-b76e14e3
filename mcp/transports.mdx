@@ -1,0 +1,76 @@
+---
+title: "MCP Transport Modes: stdio, SSE, and HTTP"
+sidebarTitle: "Transports"
+description: "cf-mcp supports three transport modes: stdio for local AI clients, SSE for persistent connections, and streamable HTTP for stateless remote deployments."
+---
+
+`cf-mcp` can serve MCP clients over three different transports. `stdio` is the default and requires no port — the server communicates by reading and writing JSON-RPC messages over standard input/output, which is exactly what Claude Desktop and similar local clients expect. `SSE` (Server-Sent Events) opens a persistent HTTP connection suitable for desktop apps and remote clients that maintain a long-lived session. `Streamable HTTP` is a fully stateless transport for REST-like integrations where the client opens a fresh connection on every request.
+
+## stdio
+
+`stdio` is the default transport when no `--sse` or `--http` flag is provided. It requires no open port and works wherever the `cf-mcp` process can be launched as a subprocess.
+
+```bash
+uv run cf-mcp --corpus ~/.exegia/datasets/bibles/BHSA
+```
+
+To connect Claude Desktop, add an entry to your `claude_desktop_config.json`:
+
+```json claude_desktop_config.json
+{
+  "mcpServers": {
+    "context-fabric": {
+      "command": "uv",
+      "args": ["run", "cf-mcp", "--corpus", "/path/to/BHSA"]
+    }
+  }
+}
+```
+
+Claude will launch `cf-mcp` as a subprocess and communicate over stdio automatically.
+
+## SSE (Server-Sent Events)
+
+Pass `--sse PORT` to start an HTTP server that keeps a persistent, streaming connection open for each client. This transport is well-suited for desktop applications and remote clients that need to hold a long-lived session.
+
+```bash
+uv run cf-mcp --corpus ~/.exegia/datasets/bibles/BHSA --sse 8000
+
+# Bind to all interfaces so remote machines can connect
+uv run cf-mcp --corpus ~/.exegia/datasets/bibles/BHSA --sse 8000 --host 0.0.0.0
+```
+
+## Streamable HTTP
+
+Pass `--http PORT` to start a stateless HTTP transport. Each request is handled independently — there is no persistent connection. Use this for REST-like integrations or clients that do not support SSE.
+
+```bash
+uv run cf-mcp --corpus ~/.exegia/datasets/bibles/BHSA --http 8000
+
+# Expose to the network
+uv run cf-mcp --corpus ~/.exegia/datasets/bibles/BHSA --http 8000 --host 0.0.0.0
+```
+
+## --host Flag
+
+Both SSE and HTTP transports default to binding on `127.0.0.1`, which means they are only reachable from the local machine. Pass `--host 0.0.0.0` to bind on all interfaces and allow connections from other machines on the network.
+
+<Note>
+  SSE and HTTP transports both default to binding on `127.0.0.1`. Pass `--host 0.0.0.0` to make the server accessible from other machines.
+</Note>
+
+## --verbose Flag
+
+Pass `--verbose` to enable `DEBUG`-level logging. This is useful for tracing corpus load times, search query execution, and transport lifecycle events.
+
+```bash
+uv run cf-mcp --corpus ~/.exegia/datasets/bibles/BHSA --sse 8000 --verbose
+```
+
+## Comparison
+
+| Transport | Flag          | Default Port | Use Case                        |
+|-----------|---------------|--------------|----------------------------------|
+| stdio     | *(none)*      | N/A          | Claude Desktop, local clients   |
+| SSE       | `--sse PORT`  | any          | Remote / desktop clients        |
+| HTTP      | `--http PORT` | any          | Stateless HTTP clients          |

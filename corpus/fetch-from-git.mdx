@@ -1,0 +1,91 @@
+---
+title: "Fetch Text-Fabric Datasets from a Git Repository"
+sidebarTitle: "Fetch from Git"
+description: "Use fetch_datasets_from_git() to shallow-clone a git repository and automatically locate all Text-Fabric dataset directories containing otext.tf and otype.tf."
+---
+
+`fetch_datasets_from_git` shallow-clones a git repository into a temporary directory, recursively scans it for Text-Fabric dataset directories (any folder containing both `otext.tf` and `otype.tf` side by side), and returns the list of matching paths. This is the fastest way to pull a public corpus — such as the ETCBC Hebrew Bible — onto your machine without manually navigating the repository layout.
+
+## Function Signature
+
+```python
+from exegia.corpus.fetch_from_git import fetch_datasets_from_git
+
+def fetch_datasets_from_git(
+    git_url: str,
+    temp_base: Path | None = None,
+) -> list[Path]:
+    ...
+```
+
+## Parameters
+
+<ParamField path="git_url" type="str" required>
+  URL of the git repository to clone. Accepts any URL that `git clone` accepts (HTTPS, SSH, or a local file path).
+</ParamField>
+
+<ParamField path="temp_base" type="Path | None">
+  Base directory under which the temporary clone is created. The clone lands at `temp_base/.temp/<tmpXXX>/`. Defaults to the current working directory (`Path.cwd()`).
+</ParamField>
+
+## Returns
+
+`list[Path]` — one entry for each directory inside the cloned repository that contains both `otext.tf` and `otype.tf`. A single repository may yield multiple paths when it bundles several dataset versions (e.g. `tf/2021`, `tf/2023`).
+
+## Raises
+
+- `subprocess.CalledProcessError` — if `git clone` exits with a non-zero status (bad URL, network failure, authentication error, etc.).
+- `FileNotFoundError` — if `git` is not found on `PATH`.
+
+## Example
+
+```python
+from pathlib import Path
+from exegia.corpus.fetch_from_git import fetch_datasets_from_git
+
+# Fetch BHSA (Hebrew Bible with annotations) — uses cwd/.temp as staging area
+paths = fetch_datasets_from_git("https://github.com/ETCBC/bhsa")
+print(paths)
+# [PosixPath('/path/to/.temp/tmpXXX/tf/2021')]
+
+# Use a persistent staging directory so the clone survives longer
+paths = fetch_datasets_from_git(
+    "https://github.com/ETCBC/bhsa",
+    temp_base=Path.home() / ".exegia" / "datasets",
+)
+```
+
+## Loading the Fetched Dataset
+
+After fetching, pass the returned paths straight to `corpus_manager`:
+
+```python
+from exegia.mcp import corpus_manager
+
+for path in paths:
+    corpus_manager.load(str(path), name=path.parent.name)
+```
+
+Or start the MCP server on the command line using one of the discovered paths:
+
+```bash
+uv run cf-mcp --corpus ~/.exegia/datasets/.temp/tmpXXX/tf/2021 --name BHSA
+```
+
+## How It Works
+
+<Steps>
+  <Step title="Shallow clone">
+    Runs `git clone --depth=1 <git_url> <clone_dir>` with `subprocess.run(..., check=True)`. The `--depth=1` flag fetches only the latest commit, keeping the download small even for large repositories.
+  </Step>
+  <Step title="Locate datasets">
+    Recursively walks the cloned directory with `Path.rglob("otext.tf")`. For each `otext.tf` found, it checks whether `otype.tf` exists in the same directory. Matching directories are collected into the result list.
+  </Step>
+  <Step title="Return paths">
+    Returns the list of matching `Path` objects. If the clone fails for any reason, the temporary directory is cleaned up and the original exception is re-raised.
+  </Step>
+</Steps>
+
+<Note>
+  The clone is placed at `temp_base/.temp/<tmpXXX>/`. The caller is responsible for moving or copying the dataset directories to a permanent location before the temporary directory is cleaned up by the operating system or your own cleanup logic.
+</Note>

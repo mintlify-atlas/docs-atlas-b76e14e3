@@ -1,0 +1,264 @@
+---
+title: "Converter Functions: EPUB, HTML, and TEI XML Output"
+sidebarTitle: "Converters"
+description: "Four converter functions turn EPUB and HTML files into Text-Fabric datasets or TEI XML. All are importable from exegia.utils and return the output path."
+---
+
+The `exegia.utils` module provides four converter functions for importing external documents as queryable corpora or structured XML. Whether you are working with EPUB ebooks, directories of HTML files, or need a distributable corpus bundle, each function handles one conversion path and returns either an output `Path` or a string.
+
+---
+
+## convert_epub_to_tf
+
+```python
+from exegia.utils.convert_epub_to_tf import convert_epub_to_tf
+
+def convert_epub_to_tf(
+    epub_path: str | Path,
+    output_dir: str | Path,
+    corpus_name: str | None = None,
+    version: str = "1.0",
+    tokenize: bool = True,
+    on_progress: Callable[[int, int, float], None] | None = None,
+) -> Path
+```
+
+Converts an EPUB file to a Text-Fabric dataset. The converter extracts Dublin Core metadata, iterates every spine item (page/chapter), parses the HTML content with BeautifulSoup, and writes `.tf` feature files using the `tf.convert.walker` walker API.
+
+**Node hierarchy produced:**
+
+```
+book
+  └─ chapter
+       └─ element | paragraph | link
+            └─ word  (slot)
+```
+
+<ParamField path="epub_path" type="str | Path" required>
+  File path or URL to the source EPUB file.
+</ParamField>
+
+<ParamField path="output_dir" type="str | Path" required>
+  Directory where the TF feature files will be written. Created automatically if it does not exist.
+</ParamField>
+
+<ParamField path="corpus_name" type="str | None">
+  Name for the corpus. Defaults to the `title` field from the EPUB Dublin Core metadata, falling back to `"EPUBCorpus"`.
+</ParamField>
+
+<ParamField path="version" type="str">
+  Version string embedded in the TF metadata. Defaults to `"1.0"`.
+</ParamField>
+
+<ParamField path="tokenize" type="bool">
+  When `True` (default), text content is split on whitespace into individual word slots. When `False`, each text run is stored as a single slot.
+</ParamField>
+
+<ParamField path="on_progress" type="Callable[[int, int, float], None] | None">
+  Optional progress callback invoked during page extraction. Receives `(current: int, total: int, percent: float)`.
+</ParamField>
+
+<ResponseField name="returns" type="Path">
+  Path to the generated TF directory.
+</ResponseField>
+
+---
+
+## EPUBToTFConverter
+
+For more control, use the underlying class directly instead of the convenience function.
+
+```python
+from exegia.utils.convert_epub_to_tf import EPUBToTFConverter
+
+converter = EPUBToTFConverter(
+    epub_path="book.epub",
+    output_dir="tf_output/",
+    corpus_name="MyBook",
+    version="1.0",
+    tokenize=True,
+    on_progress=lambda cur, tot, pct: print(f"{pct:.1f}%")
+)
+tf_path = converter.convert()
+```
+
+The constructor accepts the same parameters as `convert_epub_to_tf`. After calling `convert()`, two public attributes are populated:
+
+<ResponseField name="metadata" type="dict">
+  Dublin Core metadata extracted from the EPUB (keys include `title`, `creator`, `publisher`, `language`, `identifier`). Each value is a list of strings.
+</ResponseField>
+
+<ResponseField name="pages" type="list[dict]">
+  List of page dictionaries extracted from the EPUB spine. Each dict contains `index`, `id`, `name`, and `html` keys.
+</ResponseField>
+
+---
+
+## convert_html_to_tf
+
+```python
+from exegia.utils.convert_html_to_tf import convert_html_to_tf
+
+def convert_html_to_tf(
+    input_dir: str | Path,
+    output_dir: str | Path,
+    corpus_name: str = "HTMLCorpus",
+    version: str = "1.0",
+    advanced: bool = False,
+    **kwargs,
+) -> Path
+```
+
+Converts a directory of `.html` / `.htm` files to a Text-Fabric dataset. Files are sorted and processed in alphabetical order. Each file becomes a `document` root node.
+
+**Node hierarchy — standard mode (`advanced=False`):**
+
+```
+document
+  └─ element
+       └─ word  (slot)
+```
+
+**Node hierarchy — advanced mode (`advanced=True`):**
+
+```
+document
+  └─ paragraph | link | table
+       └─ row
+            └─ cell
+                 └─ word  (slot)
+```
+
+<ParamField path="input_dir" type="str | Path" required>
+  Directory containing the HTML files to convert.
+</ParamField>
+
+<ParamField path="output_dir" type="str | Path" required>
+  Directory where TF feature files will be written.
+</ParamField>
+
+<ParamField path="corpus_name" type="str">
+  Name for the corpus. Defaults to `"HTMLCorpus"`.
+</ParamField>
+
+<ParamField path="version" type="str">
+  Version string embedded in TF metadata. Defaults to `"1.0"`.
+</ParamField>
+
+<ParamField path="advanced" type="bool">
+  When `False` (default), uses `HTMLToTFConverter` with a flat `document → element → word` hierarchy. When `True`, uses `AdvancedHTMLToTFConverter`, which produces semantic nodes for paragraphs, links, and tables and extracts `<head>` metadata.
+</ParamField>
+
+<ParamField path="**kwargs" type="any">
+  Additional keyword arguments forwarded to the converter. Supported keys: `tokenize` (bool), `preserve_whitespace` (bool).
+</ParamField>
+
+<ResponseField name="returns" type="Path">
+  Path to the generated TF directory.
+</ResponseField>
+
+---
+
+## convert_epub_to_tei
+
+```python
+from exegia.utils.convert_epub_to_xml import convert_epub_to_tei
+
+def convert_epub_to_tei(
+    epub_path: str,
+    output_path: str | None = None,
+) -> str
+```
+
+Converts an EPUB file to a TEI P5 XML string. Uses `ebooklib` to read the EPUB and `lxml` to build the XML tree, then serialises to a UTF-8 string with an XML declaration. Optionally writes the result to a file.
+
+**TEI document structure produced:**
+
+```
+<TEI>
+  <teiHeader>
+    <fileDesc>      ← title, authors, publisher, date, identifier
+    <encodingDesc>  ← conversion note
+    <profileDesc>   ← abstract and subject keywords (when present)
+  </teiHeader>
+  <text>
+    <body>
+      <div>         ← one per EPUB document item
+        <head>      ← first heading extracted from the document
+        <p> / <div> / <quote> / <list> / <table> ...
+```
+
+<ParamField path="epub_path" type="str" required>
+  File path to the source EPUB file.
+</ParamField>
+
+<ParamField path="output_path" type="str | None">
+  Optional file path where the TEI XML will be saved. When omitted, the XML is returned only as a string.
+</ParamField>
+
+<ResponseField name="returns" type="str">
+  The complete TEI XML document as a string, including the `<?xml?>` declaration.
+</ResponseField>
+
+**Raises**
+
+| Exception | Condition |
+|---|---|
+| `FileNotFoundError` | `epub_path` does not exist |
+| `ImportError` | `ebooklib` is not installed |
+
+---
+
+## convert_to_exg
+
+```python
+from exegia.utils.convert_to_exg import convert_to_exg
+from pathlib import Path
+
+def convert_to_exg(
+    dataset_dir: Path,
+    destination: Path,
+) -> Path
+```
+
+Packages an existing Text-Fabric dataset directory into a portable `.exg` bundle — a zip archive that includes a manifest, a file index, an empty git repository stub for future versioning, and the original TF data compressed as `corpus.exgc`.
+
+**Bundle layout:**
+
+```
+{name}.exg                ← final deliverable (zip)
+  ├── manifest.json       ← corpus metadata parsed from otext.tf / otype.tf
+  ├── index.json          ← list of all .tf files with sizes
+  ├── .git                ← empty git repository stub
+  └── corpus.exgc         ← the original .tf dataset (zip)
+```
+
+<ParamField path="dataset_dir" type="Path" required>
+  Path to the folder containing `.tf` files. Must contain both `otext.tf` and `otype.tf`.
+</ParamField>
+
+<ParamField path="destination" type="Path" required>
+  Directory where the final `.exg` file will be saved. Created automatically if it does not exist.
+</ParamField>
+
+<ResponseField name="returns" type="Path">
+  Path to the produced `.exg` file (named after `dataset_dir.name`).
+</ResponseField>
+
+**Raises**
+
+| Exception | Condition |
+|---|---|
+| `FileNotFoundError` | `dataset_dir` does not exist or is not a directory |
+| `ValueError` | `otext.tf` or `otype.tf` are missing from `dataset_dir` |
+
+---
+
+## Parameter summary
+
+| Function | Input | Output | Format |
+|---|---|---|---|
+| `convert_epub_to_tf` | EPUB file | TF directory | Text-Fabric |
+| `convert_html_to_tf` | HTML directory | TF directory | Text-Fabric |
+| `convert_epub_to_tei` | EPUB file | TEI XML string / file | TEI P5 XML |
+| `convert_to_exg` | TF directory | `.exg` archive | Distributable bundle |

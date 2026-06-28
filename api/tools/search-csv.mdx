@@ -1,0 +1,75 @@
+---
+title: "search_csv(): Export search results to CSV"
+sidebarTitle: "search_csv"
+description: "Runs a query template and writes every matched node with selected feature values to a CSV file. Requires stdio transport. Defaults to otype, lex, pos, gloss columns."
+---
+
+`search_csv()` runs a Context-Fabric query template and writes the full result set — every matched node from every result tuple — to a CSV file on the filesystem where the server process is running. Each row represents one node from one result tuple and includes its result index, slot index within that tuple, numeric node ID, section reference, and one column per requested feature. This is the right tool when you want to post-process or visualise results outside the MCP session.
+
+<Warning>
+  `search_csv()` writes directly to the local filesystem of the machine running the MCP server. It only works when the server was started with **stdio transport** (the default `cf-mcp` invocation without `--sse` or `--http`). It will not write files to a client machine.
+</Warning>
+
+## Parameters
+
+<ParamField query="template" type="string" required>
+  The query template string, using the same syntax as `search()`. See `search_syntax_guide()` for details.
+</ParamField>
+
+<ParamField query="output_path" type="string" required>
+  Absolute path for the output `.csv` file on the server's filesystem (e.g. `"/home/user/results.csv"`). The file is created or overwritten. The path is expanded for `~`.
+</ParamField>
+
+<ParamField query="features" type="string[]">
+  List of feature names to include as columns in the CSV. Defaults to `["otype", "lex", "pos", "gloss"]` when omitted. Use `list_features()` to discover valid names for your corpus.
+</ParamField>
+
+<ParamField query="corpus" type="string">
+  Corpus name. When omitted, the currently active corpus is used.
+</ParamField>
+
+## Returns
+
+A confirmation string reporting how many results and total node rows were exported, and the resolved output path:
+
+```
+Exported 4,892 results (4,892 rows) to /home/user/results.csv
+```
+
+Returns `"No results found."` when the template matches nothing. Returns `"Search error: <message>"` if the template is invalid.
+
+### CSV schema
+
+| Column | Type | Description |
+|---|---|---|
+| `result_index` | integer | Zero-based index of the matched result tuple |
+| `slot_index` | integer | Zero-based position of this node within the tuple |
+| `node` | integer | Numeric node ID |
+| `section` | string | Human-readable section reference (e.g. `"Genesis 1 1"`) |
+| *(features)* | string | One column per name in `features`, value from that feature for this node |
+
+## Example
+
+```python
+result = search_csv(
+    template="word pos=verb",
+    output_path="/tmp/verbs.csv",
+    features=["lex", "pos", "gloss", "nu", "vt"],
+)
+print(result)
+```
+
+Expected output:
+
+```
+Exported 34,611 results (34,611 rows) to /tmp/verbs.csv
+```
+
+The generated CSV will look like:
+
+```
+result_index,slot_index,node,section,lex,pos,gloss,nu,vt
+0,0,1234,Genesis 1 1,BRʾ[,verb,create,sg,perf
+1,0,1289,Genesis 1 2,HJH[,verb,be,sg,wayq
+...
+```

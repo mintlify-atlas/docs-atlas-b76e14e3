@@ -1,0 +1,141 @@
+---
+title: "Convert EPUB Books to Text-Fabric Datasets"
+sidebarTitle: "EPUB to TF"
+description: "convert_epub_to_tf() converts any EPUB ebook into a Text-Fabric dataset with a book→chapter→element→paragraph→word node hierarchy, ready for MCP queries."
+---
+
+The `convert_epub_to_tf` function converts EPUB files into queryable Text-Fabric datasets. It extracts EPUB metadata, walks the spine item by item, parses each page's HTML content into semantic nodes, and optionally tokenises the text into individual word slots. The result is a valid TF directory that can be loaded directly by the MCP server or any `cfabric`-compatible tool.
+
+## Node Hierarchy Produced
+
+The converter maps every EPUB document into a five-level node hierarchy:
+
+```
+book
+  chapter          (EPUB spine item / page)
+    element        (block HTML element)
+      paragraph    (paragraph-like elements: p, blockquote, section, article)
+        word       (slot — smallest unit, individual words)
+```
+
+Links (`<a>`) and tables (`table → row → cell`) are also emitted as distinct node types when the converter encounters them during the HTML walk.
+
+## Function Signature
+
+```python
+from exegia.utils.convert_epub_to_tf import convert_epub_to_tf
+
+def convert_epub_to_tf(
+    epub_path: str | Path,
+    output_dir: str | Path,
+    corpus_name: str | None = None,
+    version: str = "1.0",
+    tokenize: bool = True,
+    on_progress: Callable[[int, int, float], None] | None = None,
+) -> Path:
+    ...
+```
+
+## Parameters
+
+<ParamField path="epub_path" type="str | Path" required>
+  Path or URL to the source EPUB file. Accepts a local filesystem path or an HTTP(S) URL to a remote EPUB.
+</ParamField>
+
+<ParamField path="output_dir" type="str | Path" required>
+  Directory where the generated `.tf` files will be written. Created automatically if it does not exist.
+</ParamField>
+
+<ParamField path="corpus_name" type="str">
+  Name assigned to the corpus in `otext.tf`. Defaults to the EPUB's Dublin Core `title` field, or `"EPUBCorpus"` if no title is present.
+</ParamField>
+
+<ParamField path="version" type="str">
+  Version string embedded in the TF metadata. Default: `"1.0"`.
+</ParamField>
+
+<ParamField path="tokenize" type="bool">
+  When `True` (default), text is split on whitespace and each word becomes a separate slot node. When `False`, each contiguous text run is emitted as a single slot.
+</ParamField>
+
+<ParamField path="on_progress" type="Callable[[int, int, float], None]">
+  Optional progress callback invoked after each page is processed. Receives `(current, total, percent)` where `percent` is a float between `0` and `100`.
+</ParamField>
+
+## Returns
+
+`Path` — the path to the generated TF directory. Pass this directly to `corpus_manager.load()` or the `cf-mcp` CLI.
+
+## Full Example
+
+```python
+from exegia.utils.convert_epub_to_tf import convert_epub_to_tf
+
+tf_path = convert_epub_to_tf(
+    epub_path="commentary.epub",
+    output_dir="~/.exegia/datasets/books/my-commentary/",
+    corpus_name="MyCommentary",
+)
+print(f"Dataset created at: {tf_path}")
+```
+
+## Load and Query the Result
+
+```bash
+# Start the MCP server pointing at the newly created dataset
+uv run cf-mcp --corpus ~/.exegia/datasets/books/my-commentary
+```
+
+```python
+from exegia.mcp import corpus_manager
+
+corpus_manager.load("~/.exegia/datasets/books/my-commentary", name="MyCommentary")
+```
+
+## Features Stored on Nodes
+
+Every node in the output dataset carries one or more of the following features:
+
+| Feature | Node Types | Description |
+|---|---|---|
+| `title` | `book`, `chapter` | Title or chapter name |
+| `creator` | `book` | Author/Creator |
+| `publisher` | `book` | Publisher |
+| `language` | `book` | Language code |
+| `identifier` | `book` | ISBN or other identifier |
+| `chapter_index` | `chapter` | 0-based chapter index |
+| `chapter_id` | `chapter` | ID from EPUB spine |
+| `chapter_name` | `chapter` | Filename inside EPUB |
+| `tag` | `element`, `paragraph` | HTML tag name |
+| `class` | `element` | CSS class names |
+| `href` | `link` | Link URL |
+| `depth` | `element`, `paragraph` | Nesting depth in HTML |
+| `text` | `word` | The word text |
+
+## Class-Based Usage
+
+For more control — for example to inject a live progress bar — use `EPUBToTFConverter` directly:
+
+```python
+from exegia.utils.convert_epub_to_tf import EPUBToTFConverter
+
+converter = EPUBToTFConverter(
+    epub_path="book.epub",
+    output_dir="tf_output/",
+    corpus_name="MyBook",
+    on_progress=lambda cur, tot, pct: print(f"{pct:.1f}%"),
+)
+tf_path = converter.convert()
+```
+
+## EPUB to TEI XML (Alternative Output)
+
+If you need TEI XML instead of a Text-Fabric dataset — for example to feed into a separate XML pipeline — use the `convert_epub_to_tei` function from the XML converter module:
+
+```python
+from exegia.utils.convert_epub_to_xml import convert_epub_to_tei
+
+tei_xml = convert_epub_to_tei("book.epub", output_path="book.xml")
+```
+
+This produces a TEI P5-compliant XML file with a `<teiHeader>` containing Dublin Core metadata and a `<text><body>` containing the full document content mapped to TEI elements (`<p>`, `<div>`, `<head>`, `<ref>`, `<table>`, etc.).

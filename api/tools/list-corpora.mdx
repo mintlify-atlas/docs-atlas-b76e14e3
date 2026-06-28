@@ -1,0 +1,36 @@
+---
+title: "list_corpora(): List all loaded corpora"
+sidebarTitle: "list_corpora"
+description: "Lists every corpus loaded into the server and marks which one is currently active. No parameters required. Returns a plain-text formatted list."
+---
+
+`list_corpora()` returns a plain-text list of every corpus loaded into the running server, marking the currently active corpus with an asterisk (`*`). Call this first when connecting to a new server instance to discover which corpora are available and which one will be targeted by default when you omit the `corpus` argument in other tools.
+
+## Parameters
+
+This tool takes no parameters.
+
+## Returns
+
+A formatted string listing all loaded corpus names, one per line, preceded by two spaces. The currently active corpus is marked with `*`; all others are marked with a single space. If no corpora are loaded, returns `"No corpora loaded."`.
+
+```
+Loaded corpora (* = current):
+  * BHSA
+    GNT
+```
+
+## Example
+
+```python
+result = list_corpora()
+print(result)
+```
+
+Expected output:
+
+```
+Loaded corpora (* = current):
+  * BHSA
+    GNT
+```

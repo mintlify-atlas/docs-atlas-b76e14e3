@@ -1,0 +1,62 @@
+---
+title: "Environment Variables for Context Fabric"
+sidebarTitle: "Environment Vars"
+description: "Context Fabric reads configuration from .env.{ENVIRONMENT} files. Set Supabase credentials, storage settings, and application options via environment variables."
+---
+
+Context Fabric uses `pydantic-settings` to load configuration from `.env.{ENVIRONMENT}` files — for example, `.env.development` or `.env.production`. The active file is resolved from the `ENVIRONMENT` environment variable at import time, before any module-level constants are evaluated.
+
+## Environment Files
+
+Start by copying the provided example file:
+
+```bash
+cp .env.example .env.development
+# Edit .env.development with your project values
+```
+
+Files are resolved in this order at startup:
+
+1. `.env.{ENVIRONMENT}` — the file matching the current `ENVIRONMENT` value (e.g. `.env.production`)
+2. `.env.development` — the fallback when the named file does not exist on disk
+
+This means you can maintain separate credential sets for each environment without changing any code.
+
+## All Environment Variables
+
+| Variable | Required | Description |
+|---|---|---|
+| `SUPABASE_URL` | Auth only | Supabase project URL (e.g. `https://<ref>.supabase.co`) |
+| `SUPABASE_ANON_KEY` | Auth only | Public/anonymous API key for client-side operations |
+| `SUPABASE_SERVICE_ROLE_KEY` | Auth only | Service-role key used by the server-side client (bypasses RLS) |
+| `SUPABASE_STORAGE_BUCKET` | Auth only | Storage bucket name for file uploads |
+| `DATABASE_URL` | Auth only | Full PostgreSQL connection URL |
+| `DATASETS_BASE_PATH` | Optional | Base directory path for local dataset files |
+| `ENVIRONMENT` | Optional | Active environment name: `development`, `staging`, or `production` |
+| `CORS_ORIGINS` | Optional | Comma-separated list of allowed CORS origins |
+| `OPEN_AI_KEY` | Optional | OpenAI API key for AI-powered features |
+
+## MCP Server: No Auth Required
+
+The `cf-mcp` server reads corpora from the `--corpus` flag only and does not use Supabase at runtime. Supabase environment variables are **not** required to run the MCP server.
+
+```bash
+uv run cf-mcp --corpus /data/BHSA
+```
+
+## Setting the Active Environment
+
+Pass `ENVIRONMENT` inline or export it before running any command:
+
+```bash
+# Inline — uses .env.production
+ENVIRONMENT=production uv run cf-mcp --corpus /data/BHSA
+
+# Shell export — applies to the current session
+export ENVIRONMENT=staging
+uv run your-script.py
+```
+
+<Warning>
+  `SUPABASE_SERVICE_ROLE_KEY` grants elevated database access and bypasses Row Level Security. Never expose it in client-side code, public repositories, or any environment where untrusted users can read process variables. Use it exclusively in server-side or backend contexts.
+</Warning>

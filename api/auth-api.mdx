@@ -1,0 +1,442 @@
+---
+title: "Authentication API: SignInResult, SignUpResult, CurrentUser"
+sidebarTitle: "Auth API"
+description: "Full reference for exegia.auth: sign_in_with_id_token, request_email_otp, verify_email_otp, sign_up, create_user_profile, get_current_user_record, and CurrentUser."
+---
+
+The `exegia.auth` module provides high-level authentication functions that wrap Supabase Auth and enforce the `public.users` profile check. Authentication (establishing an identity) and sign-up (provisioning the application profile row) are deliberately separate steps. All functions return typed frozen dataclasses so callers can branch on structured outcomes rather than catching exceptions for expected states.
+
+---
+
+## Dataclasses
+
+### SignInResult
+
+```python
+from exegia.auth.signin import SignInResult
+
+@dataclass(frozen=True)
+class SignInResult:
+    ok: bool
+    current_user: CurrentUser | None = None
+    session: Session | None = None
+    message: str | None = None
+    needs_signup: bool = False
+```
+
+Returned by every sign-in function. When `ok` is `True`, the user is fully authenticated and has a `public.users` record.
+
+<ResponseField name="ok" type="bool">
+  `True` when the user is authenticated **and** has a `public.users` profile record.
+</ResponseField>
+
+<ResponseField name="current_user" type="CurrentUser | None">
+  Combined auth identity and profile. Set only when `ok` is `True`.
+</ResponseField>
+
+<ResponseField name="session" type="Session | None">
+  Supabase session containing the access and refresh tokens. Present whenever the provider authenticated the user — including the `needs_signup` path — so the caller can pass the token to `sign_up()`.
+</ResponseField>
+
+<ResponseField name="message" type="str | None">
+  User-facing message. Set on non-`ok` paths.
+</ResponseField>
+
+<ResponseField name="needs_signup" type="bool">
+  `True` when the provider authenticated the user but no `public.users` record exists yet. The caller should offer registration.
+</ResponseField>
+
+---
+
+### SignUpResult
+
+```python
+from exegia.auth.signup import SignUpResult
+
+@dataclass(frozen=True)
+class SignUpResult:
+    ok: bool
+    current_user: CurrentUser | None = None
+    session: Session | None = None
+    message: str | None = None
+    already_registered: bool = False
+```
+
+Returned by `sign_up()`.
+
+<ResponseField name="ok" type="bool">
+  `True` when a new `public.users` record was created for the user.
+</ResponseField>
+
+<ResponseField name="current_user" type="CurrentUser | None">
+  The combined auth and profile payload. Set on success and also on the `already_registered` path (the existing record is returned).
+</ResponseField>
+
+<ResponseField name="session" type="Session | None">
+  The session when sign-up started one (anonymous flow).
+</ResponseField>
+
+<ResponseField name="message" type="str | None">
+  User-facing message. Set on non-`ok` paths.
+</ResponseField>
+
+<ResponseField name="already_registered" type="bool">
+  `True` when the user already had a `public.users` record. No new row was created.
+</ResponseField>
+
+---
+
+### CurrentUser
+
+```python
+from exegia.auth.current_user import CurrentUser
+
+@dataclass(frozen=True)
+class CurrentUser:
+    auth_user: User        # supabase_auth.User
+    profile: dict | None   # public.users row, or None
+```
+
+The current user as a combined view of the Supabase Auth identity and the application's `public.users` record.
+
+<ResponseField name="auth_user" type="User">
+  The authenticated user from Supabase Auth (`auth.users`).
+</ResponseField>
+
+<ResponseField name="profile" type="dict | None">
+  The matching `public.users` record as a plain dict, or `None` when no application row exists yet (e.g. a freshly created anonymous user).
+</ResponseField>
+
+**Properties**
+
+<ResponseField name="id" type="str">
+  The auth user's UUID. Also the `public.users` primary key.
+</ResponseField>
+
+<ResponseField name="email" type="str | None">
+  The user's email address, if one is attached to the auth identity.
+</ResponseField>
+
+<ResponseField name="is_anonymous" type="bool">
+  `True` when this is an anonymous (not-yet-linked) user.
+</ResponseField>
+
+<ResponseField name="is_permanent" type="bool">
+  `True` when the user has been upgraded past the anonymous stage.
+</ResponseField>
+
+<ResponseField name="has_profile" type="bool">
+  `True` when a `public.users` record was found for this user.
+</ResponseField>
+
+<ResponseField name="providers" type="list[str]">
+  Identity providers linked to this user (e.g. `["google"]`).
+</ResponseField>
+
+**Methods**
+
+```python
+current_user.has_provider(provider: str) -> bool
+```
+
+Returns `True` if `provider` is already linked to this user.
+
+---
+
+## Sign-in functions
+
+### sign_in_with_id_token
+
+```python
+from exegia.auth.signin import sign_in_with_id_token
+
+sign_in_with_id_token(
+    provider: IdTokenProvider,
+    token: str,
+    *,
+    access_token: str | None = None,
+    nonce: str | None = None,
+    captcha_token: str | None = None,
+) -> SignInResult
+```
+
+Signs in with an Apple or Google OIDC ID token, then checks for a `public.users` record. Produces a session in a single call.
+
+<ParamField path="provider" type="IdTokenProvider" required>
+  The OIDC provider that issued the token. One of `"apple"` or `"google"`.
+</ParamField>
+
+<ParamField path="token" type="str" required>
+  The OIDC ID token (JWT) returned by the provider.
+</ParamField>
+
+<ParamField path="access_token" type="str | None">
+  Optional provider access token.
+</ParamField>
+
+<ParamField path="nonce" type="str | None">
+  Optional raw nonce used to obtain the ID token. Apple typically requires this.
+</ParamField>
+
+<ParamField path="captcha_token" type="str | None">
+  Optional CAPTCHA verification token.
+</ParamField>
+
+**Raises:** `AuthApiError` if the ID token is invalid or the provider is misconfigured.
+
+---
+
+### request_email_otp
+
+```python
+from exegia.auth.signin import request_email_otp
+
+request_email_otp(
+    email: str,
+    *,
+    email_redirect_to: str | None = None,
+    should_create_user: bool | None = None,
+    captcha_token: str | None = None,
+) -> AuthOtpResponse
+```
+
+Step 1 of the email sign-in flow. Sends a one-time code or magic link to the given address. No session is created and no profile check runs at this stage.
+
+<ParamField path="email" type="str" required>
+  Destination email address.
+</ParamField>
+
+<ParamField path="email_redirect_to" type="str | None">
+  Optional URL to redirect to after a magic-link click.
+</ParamField>
+
+<ParamField path="should_create_user" type="bool | None">
+  Whether to create a new auth user when the email is unknown. Defaults to the project setting when omitted.
+</ParamField>
+
+<ParamField path="captcha_token" type="str | None">
+  Optional CAPTCHA verification token.
+</ParamField>
+
+**Returns:** `AuthOtpResponse` — the OTP dispatch response.
+
+**Raises:** `AuthApiError` if the code cannot be dispatched.
+
+---
+
+### verify_email_otp
+
+```python
+from exegia.auth.signin import verify_email_otp
+
+verify_email_otp(
+    email: str,
+    token: str,
+    *,
+    captcha_token: str | None = None,
+) -> SignInResult
+```
+
+Step 2 of the email sign-in flow. Verifies the one-time code, creates a session, and runs the `public.users` profile check.
+
+<ParamField path="email" type="str" required>
+  The email address the code was sent to.
+</ParamField>
+
+<ParamField path="token" type="str" required>
+  The one-time code the user received.
+</ParamField>
+
+<ParamField path="captcha_token" type="str | None">
+  Optional CAPTCHA verification token.
+</ParamField>
+
+**Raises:** `AuthApiError` if the code is invalid or has expired.
+
+---
+
+## Sign-up functions
+
+### sign_up
+
+```python
+from exegia.auth.signup import sign_up
+
+sign_up(
+    *,
+    access_token: str | None = None,
+    profile_fields: dict | None = None,
+    anonymous: bool = False,
+    anonymous_metadata: dict | None = None,
+    captcha_token: str | None = None,
+) -> SignUpResult
+```
+
+Creates the `public.users` record for a user. Provide `access_token` for a user who has already authenticated (via ID token or email OTP), or set `anonymous=True` to begin a fresh anonymous session and register that guest. Exactly one of the two is required.
+
+If the user already has a `public.users` record, no new row is created and `already_registered` is set on the result.
+
+<ParamField path="access_token" type="str | None">
+  JWT of an already-authenticated user to register.
+</ParamField>
+
+<ParamField path="profile_fields" type="dict | None">
+  Optional extra columns to set on the `public.users` row (e.g. `{"display_name": "Alice"}`).
+</ParamField>
+
+<ParamField path="anonymous" type="bool">
+  When `True`, starts an anonymous session first and registers that guest.
+</ParamField>
+
+<ParamField path="anonymous_metadata" type="dict | None">
+  Optional `user_metadata` for the anonymous user. Used only when `anonymous=True`.
+</ParamField>
+
+<ParamField path="captcha_token" type="str | None">
+  Optional CAPTCHA token for the anonymous sign-in.
+</ParamField>
+
+**Raises:** `AuthApiError` if anonymous sign-in fails or the access token is invalid. `APIError` if the profile insert fails unexpectedly.
+
+---
+
+### start_anonymous_session
+
+```python
+from exegia.auth.signup import start_anonymous_session
+
+start_anonymous_session(
+    *,
+    data: dict | None = None,
+    captcha_token: str | None = None,
+) -> AuthResponse
+```
+
+Thin delegate to `supabase.auth.sign_in_anonymously`. Starts a guest session without creating a `public.users` record. Use this when you need an anonymous session independently of sign-up.
+
+<ParamField path="data" type="dict | None">
+  Optional metadata stored on the anonymous user's `user_metadata`.
+</ParamField>
+
+<ParamField path="captcha_token" type="str | None">
+  Optional CAPTCHA verification token.
+</ParamField>
+
+**Returns:** `AuthResponse` with the new anonymous user and session.
+
+**Raises:** `AuthApiError` if anonymous sign-ins are disabled for the project.
+
+---
+
+### create_user_profile
+
+```python
+from exegia.auth.signup import create_user_profile
+
+create_user_profile(
+    user_id: str,
+    *,
+    fields: dict | None = None,
+) -> dict
+```
+
+Inserts a `public.users` record for an auth user. Uses the service-role client so it bypasses RLS.
+
+<ParamField path="user_id" type="str" required>
+  The `auth.users.id` UUID to key the record by.
+</ParamField>
+
+<ParamField path="fields" type="dict | None">
+  Optional additional columns to set on the row, matching your `public.users` schema.
+</ParamField>
+
+<ResponseField name="returns" type="dict">
+  The created row as returned by the database insert.
+</ResponseField>
+
+**Raises:** `APIError` if the insert fails (e.g. a record already exists).
+
+---
+
+## User resolution functions
+
+### get_current_user_record
+
+```python
+from exegia.auth.current_user import get_current_user_record
+
+get_current_user_record(access_token: str) -> CurrentUser | None
+```
+
+Resolves the current user from a JWT and joins the `public.users` profile.
+
+<ParamField path="access_token" type="str" required>
+  The user's JWT (e.g. from the `Authorization` header).
+</ParamField>
+
+<ResponseField name="returns" type="CurrentUser | None">
+  A `CurrentUser` combining the auth identity and profile row, or `None` when the token maps to no user.
+</ResponseField>
+
+**Raises:** `AuthApiError` if the access token is invalid or expired.
+
+---
+
+### get_profile
+
+```python
+from exegia.auth.current_user import get_profile
+
+get_profile(user_id: str) -> dict | None
+```
+
+Fetches the `public.users` row for a given auth UUID directly. Uses the service-role client and bypasses RLS.
+
+<ParamField path="user_id" type="str" required>
+  The auth user UUID (`auth.users.id`).
+</ParamField>
+
+<ResponseField name="returns" type="dict | None">
+  The full `public.users` row as a dict, or `None` when no matching record exists.
+</ResponseField>
+
+---
+
+### link_identity_to_current_user
+
+```python
+from exegia.auth.current_user import link_identity_to_current_user
+
+link_identity_to_current_user(
+    access_token: str,
+    provider: OAuthProvider,
+    *,
+    redirect_to: str | None = None,
+    scopes: str | None = None,
+    query_params: dict[str, str] | None = None,
+)
+```
+
+Links an OAuth identity to the current user. The primary use case is upgrading an anonymous user by attaching an Apple or Google identity, but linking an additional provider to an already-permanent user is also supported. Returns an OAuth response containing the provider authorization URL; the caller is responsible for redirecting the user to that URL.
+
+<ParamField path="access_token" type="str" required>
+  The current user's JWT. Used to resolve the user and detect anonymous-upgrade scenarios.
+</ParamField>
+
+<ParamField path="provider" type="OAuthProvider" required>
+  The OAuth provider to link (e.g. `"apple"` or `"google"`).
+</ParamField>
+
+<ParamField path="redirect_to" type="str | None">
+  Optional URL to redirect to after the provider authorization completes.
+</ParamField>
+
+<ParamField path="scopes" type="str | None">
+  Optional space-separated list of provider scopes to request.
+</ParamField>
+
+<ParamField path="query_params" type="dict[str, str] | None">
+  Optional extra query parameters for the authorization URL.
+</ParamField>
+
+**Raises:** `ValueError` if the access token maps to no current user. `AuthApiError` if linking is rejected by the auth server.

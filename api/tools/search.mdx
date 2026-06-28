@@ -1,0 +1,92 @@
+---
+title: "search(): Query the corpus with a template"
+sidebarTitle: "search"
+description: "Runs a Context-Fabric query template against a corpus. Supports results, count, statistics, and passages return modes. Returns a cursor_id for pagination."
+---
+
+`search()` is the primary query tool for Context-Fabric. You write a template string that describes a structural pattern — node types with feature conditions and indentation-based containment — and the engine returns every place that pattern occurs in the corpus. In the default `"results"` mode the tool returns the first page of matching node tuples along with their section references and a `cursor_id` you can hand to `search_continue()` to page through the rest. Other return modes let you get a quick total count, a node-type breakdown, or rendered passage text directly.
+
+Consult `search_syntax_guide()` for full template syntax documentation.
+
+## Parameters
+
+<ParamField query="template" type="string" required>
+  The query template string. Uses indentation to express containment and space-separated `feature=value` conditions on node lines. For example:
+
+  ```
+  verse
+    word pos=verb
+  ```
+
+  finds every verse that contains at least one verb. See `search_syntax_guide()` for the complete syntax.
+</ParamField>
+
+<ParamField query="return_type" type="string">
+  Controls what the tool returns. One of:
+
+  - `"results"` *(default)* — Node tuples with section references for each matched result, plus a `cursor_id` for pagination when the total exceeds `limit`.
+  - `"count"` — A single line with the total number of matches: `"Total results: N"`.
+  - `"statistics"` — A frequency breakdown of every node type present across all matched tuples.
+  - `"passages"` — Rendered text for the first `limit` matched nodes, using the format specified by `fmt`.
+</ParamField>
+
+<ParamField query="limit" type="integer">
+  Maximum number of results to include in the response. Clamped to the range `1–100`. Defaults to `20`. In `"results"` mode, remaining results are accessible via `search_continue()`.
+</ParamField>
+
+<ParamField query="fmt" type="string">
+  Text rendering format, used only when `return_type="passages"`. Pass a format name from `get_text_formats()` (e.g. `"text-orig-full"`). When omitted, the corpus default format is used.
+</ParamField>
+
+<ParamField query="corpus" type="string">
+  Corpus name. When omitted, the currently active corpus is used.
+</ParamField>
+
+## Returns
+
+The shape of the return value depends on `return_type`:
+
+- **`"results"`** — A header line `"Results: N total, showing M"`, followed by numbered lines of pipe-separated section references for each result tuple, and a `cursor_id:` line when further results exist. The cursor expires after **5 minutes** of inactivity.
+- **`"count"`** — `"Total results: N"`.
+- **`"statistics"`** — `"Result statistics (total=N):"` followed by a frequency table of node types.
+- **`"passages"`** — One `[section ref] text` line per result, followed by `(showing M of N)` when truncated.
+
+Returns `"Search error: <message>"` if the template cannot be parsed or executed.
+
+## Example
+
+```python
+# Find the first 5 verses containing a verb
+result = search(
+    template="verse\n  word pos=verb",
+    return_type="results",
+    limit=5,
+)
+print(result)
+```
+
+Expected output:
+
+```
+Results: 4,892 total, showing 5
+
+     1. Genesis 1 1 | Genesis 1 1
+     2. Genesis 1 2 | Genesis 1 2
+     3. Genesis 1 3 | Genesis 1 3
+     4. Genesis 1 4 | Genesis 1 4
+     5. Genesis 1 5 | Genesis 1 5
+
+cursor_id: 3f2a1b4c-8d9e-4f0a-b1c2-d3e4f5a6b7c8
+```
+
+```python
+# Just get the count
+result = search(template="word pos=verb", return_type="count")
+print(result)
+```
+
+Expected output:
+
+```
+Total results: 34,611
+```

@@ -1,47 +1,112 @@
 ---
-title: "Quickstart"
-description: "Begin with a guide on the fastest path to a successful outcome"
+title: "Get Started with Context Fabric in 5 Minutes"
+sidebarTitle: "Quickstart"
+description: "Install corpora-py, start the cf-mcp server, and run your first corpus search against a biblical text dataset in under 5 minutes."
 ---
 
-Describe how someone begins using your product. What is the first thing they need to do? Are there any prerequisites?
-
-A quickstart should take someone from zero to using your product. They'll get a quick win and a sense of what they can accomplish.
-
-## Prerequisites
-
-Before you begin, you must have:
-
-- Requirement one (for example, Node.js 18+, a free account, an API key)
-- Requirement two (for example, a compatible device, a compatible browser, a compatible operating system)
-
-## Get started
+This guide walks you through installing the `corpora-py` package, downloading a Text-Fabric corpus from a public git repository, and running your first query — either through the `cf-mcp` server or directly from Python. By the end you will have a working MCP server ready to connect to Claude Desktop or any other MCP-compatible AI client.
 
 <Steps>
-  <Step title="Install">
-    Describe how to install your product or sign up.
+
+  <Step title="Prerequisites">
+    Context Fabric requires **Python 3.13 or later** and [uv](https://docs.astral.sh/uv/) 0.9 or later. Verify that both are available before continuing:
 
     ```bash
-    npm install your-package
+    python --version   # should print Python 3.13.x or higher
+    uv --version       # should print uv 0.9.x or higher
     ```
+
+    You will also need **git** on your `PATH` if you plan to fetch corpus datasets directly from GitHub.
   </Step>
-  <Step title="Configure">
-    Describe any setup or configuration needed before first use.
+
+  <Step title="Install corpora-py">
+    Install the package into your project with `uv` (recommended) or `pip`:
+
+    <CodeGroup>
+      ```bash uv
+      uv add corpora-py
+      ```
+
+      ```bash pip
+      pip install corpora-py
+      ```
+    </CodeGroup>
+
+    This installs the `cf-mcp` CLI entry point along with all dependencies, including `fastmcp`, `context-fabric`, and `text-fabric`.
+  </Step>
+
+  <Step title="Obtain a corpus">
+    Text-Fabric datasets are stored locally under `~/.exegia/datasets/`. Use `fetch_datasets_from_git` to shallow-clone a public corpus repository and locate its TF dataset directories automatically:
+
+    ```python
+    from exegia.corpus.fetch_from_git import fetch_datasets_from_git
+
+    paths = fetch_datasets_from_git("https://github.com/ETCBC/bhsa")
+    print(paths)  # [PosixPath('/home/user/.exegia/datasets/.../BHSA/tf/2021')]
+    ```
+
+    The function returns a list of `Path` objects, each pointing to a directory that contains both `otext.tf` and `otype.tf` — the two files required by every valid TF dataset.
+
+    <Note>
+      Corpus repositories can be several hundred megabytes. The fetch is a shallow clone, so only the latest commit is downloaded. Subsequent calls for the same repository skip the download if the directory already exists.
+    </Note>
+  </Step>
+
+  <Step title="Start the MCP server">
+    Pass the corpus path to `cf-mcp` with `--corpus`. The server defaults to **stdio** transport, which is what Claude Desktop and most MCP clients expect:
 
     ```bash
-    your-cli init
+    uv run cf-mcp --corpus ~/.exegia/datasets/bibles/BHSA
     ```
-  </Step>
-  <Step title="Run it">
-    Show the first thing a user does to see it working.
+
+    To start with **SSE transport** on port 8000 instead (useful for remote or browser-based clients):
 
     ```bash
-    your-cli start
+    uv run cf-mcp --corpus ~/.exegia/datasets/bibles/BHSA --sse 8000
     ```
+
+    You can load multiple corpora in a single server process by repeating `--corpus` and `--name`:
+
+    ```bash
+    uv run cf-mcp \
+      --corpus ~/.exegia/datasets/bibles/BHSA --name BHSA \
+      --corpus ~/.exegia/datasets/bibles/GNT  --name GNT
+    ```
+
+    <Note>
+      For Claude Desktop, use the stdio transport (no `--sse` flag) and add the `cf-mcp` command to your Claude Desktop MCP server configuration. The AI assistant will then have access to all 11 corpus tools automatically.
+    </Note>
   </Step>
+
+  <Step title="Run your first query">
+    You can also start the server and manage corpora entirely from Python:
+
+    ```python
+    from exegia.mcp import mcp, corpus_manager
+
+    # Load a corpus by path — the name defaults to the directory name
+    corpus_manager.load("~/.exegia/datasets/bibles/BHSA", name="BHSA")
+
+    # Start the server with SSE transport
+    mcp.run(transport="sse", host="localhost", port=8000)
+    ```
+
+    Once the server is running, any MCP client can call tools such as `search`, `get_passages`, or `describe_corpus` against the loaded corpus.
+  </Step>
+
 </Steps>
 
-<Tip>
-  Give people a way to get help. This could be a link to a support page, a chat with a customer support agent, or a forum for your product.
+## Recommended AI Workflow
 
-  Example: Need help? Reach out to us at [support@yourcompany.com](mailto:support@yourcompany.com).
-</Tip>
+When an AI assistant connects to the Context Fabric MCP server, the following tool sequence gives it a solid understanding of the corpus before issuing expensive queries:
+
+```text
+describe_corpus()           → understand what node types exist
+list_features()             → see what annotations are available
+search_syntax_guide()       → learn the query language
+search(template, "count")   → check scale before fetching results
+search(template, "results") → get paginated result set
+get_passages(references)    → read the matched text
+```
+
+Start with `describe_corpus()` to see the section hierarchy (e.g. `book > chapter > verse`) and the count of each node type. Then call `list_features()` to discover what annotation columns are available — `lex`, `pos`, `gloss`, and so on. Once you understand the corpus structure, use `search_syntax_guide()` to review the template query syntax before writing your first pattern. Always call `search` with `return_type="count"` first to check how many results a template will produce before fetching the full result set.

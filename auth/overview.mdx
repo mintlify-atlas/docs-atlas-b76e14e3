@@ -1,0 +1,110 @@
+---
+title: "Authentication in Context Fabric: Supabase-Backed Auth"
+sidebarTitle: "Overview"
+description: "Context Fabric uses Supabase Auth with three flows: email OTP, Apple/Google OIDC ID tokens, and anonymous sessions. All flows produce a SignInResult or SignUpResult."
+---
+
+The `exegia.auth` module provides application-level authentication on top of Supabase Auth. It handles sign-in and sign-up flows and always checks whether a matching `public.users` record exists before returning a result — meaning a successful sign-in requires both a valid Supabase auth identity and a provisioned application profile.
+
+## Architecture
+
+Context Fabric splits authentication into two layers that work together:
+
+**`exegia.supabase` — low-level layer**
+
+- `client.py` creates a single synchronous Supabase client using the service-role key. Because the service-role key bypasses Row Level Security, all database operations in this layer run with elevated permissions regardless of the calling user's session.
+- `authentication.py` provides typed wrappers around `supabase.auth.*` methods, translating raw credentials into structured `AuthResponse`, `AuthOtpResponse`, and `OAuthResponse` objects from `supabase_auth`.
+
+**`exegia.auth` — high-level layer**
+
+- After any authentication call, this layer checks for a matching `public.users` record keyed by `auth.users.id`.
+- On success, it returns a `SignInResult` or `SignUpResult` dataclass carrying a `CurrentUser` that joins the auth identity with the application profile.
+- On failure (authenticated but no profile), it signals `needs_signup` so the caller can route the user to registration.
+
+## Supported Flows
+
+| Flow | Module | When to use |
+|---|---|---|
+| Email OTP (magic link) | `exegia.auth.signin` | Passwordless login via email |
+| OIDC ID token (Apple/Google) | `exegia.auth.signin` | Social login with ID token |
+| Anonymous session | `exegia.auth.signup` | Guest access before registration |
+| Profile registration | `exegia.auth.signup` | Create `public.users` record |
+
+## Result Types
+
+All sign-in functions return a `SignInResult`. The `sign_up()` function returns a `SignUpResult`. Both are frozen dataclasses.
+
+**`SignInResult`**
+
+<ResponseField name="ok" type="bool">
+  `True` when the user is fully authenticated **and** has a `public.users` record.
+</ResponseField>
+
+<ResponseField name="current_user" type="CurrentUser | None">
+  The combined auth identity and application profile. Set only when `ok` is `True`.
+</ResponseField>
+
+<ResponseField name="session" type="Session | None">
+  The Supabase session carrying access and refresh tokens. Present on success and also on the `needs_signup` path, so registration can be completed without re-authenticating.
+</ResponseField>
+
+<ResponseField name="message" type="str | None">
+  A user-facing message, populated on non-`ok` paths.
+</ResponseField>
+
+<ResponseField name="needs_signup" type="bool">
+  `True` when the user authenticated successfully but has no `public.users` record yet.
+</ResponseField>
+
+**`SignUpResult`**
+
+<ResponseField name="ok" type="bool">
+  `True` if a new `public.users` record was created for the user.
+</ResponseField>
+
+<ResponseField name="current_user" type="CurrentUser | None">
+  The combined auth identity and profile. Set on success and on the `already_registered` path.
+</ResponseField>
+
+<ResponseField name="session" type="Session | None">
+  The Supabase session. Populated when the anonymous flow started a new session.
+</ResponseField>
+
+<ResponseField name="message" type="str | None">
+  A user-facing message, populated on non-`ok` paths.
+</ResponseField>
+
+<ResponseField name="already_registered" type="bool">
+  `True` when the user already has a `public.users` record, so no new record was created.
+</ResponseField>
+
+## CurrentUser Dataclass
+
+`CurrentUser` is the unified view of a signed-in user. It wraps the `auth.users` identity (a `supabase_auth.User`) and the `public.users` profile row.
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | `str` | Auth user UUID — also the `public.users` primary key |
+| `email` | `str \| None` | User email from the auth identity |
+| `is_anonymous` | `bool` | Whether the user is an unlinked anonymous session |
+| `is_permanent` | `bool` | Whether the account is fully registered (not anonymous) |
+| `has_profile` | `bool` | Whether a `public.users` record was found |
+| `providers` | `list[str]` | List of linked OAuth provider identifiers, e.g. `["google"]` |
+
+## Configuration Required
+
+The Supabase client is created at import time using two environment variables. Both must be set before importing any `exegia.auth` or `exegia.supabase` module:
+
+- `SUPABASE_URL` — your Supabase project URL
+- `SUPABASE_SECRET_KEY` / `SUPABASE_SERVICE_ROLE_KEY` — service-role key that bypasses RLS
+
+See [Environment Variables](/configuration/environment) for the full list and setup instructions.
+
+<CardGroup cols={2}>
+  <Card title="Sign In" icon="arrow-right-to-bracket" href="/auth/sign-in">
+    Email OTP and Apple/Google OIDC flows that return a `SignInResult`.
+  </Card>
+  <Card title="Sign Up" icon="user-plus" href="/auth/sign-up">
+    Profile registration, anonymous sessions, and identity linking.
+  </Card>
+</CardGroup>

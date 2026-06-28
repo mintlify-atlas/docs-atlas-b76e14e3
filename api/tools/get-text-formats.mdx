@@ -1,0 +1,38 @@
+---
+title: "get_text_formats(): Show available text formats"
+sidebarTitle: "get_text_formats"
+description: "Lists every text encoding format defined for a corpus, each with a sample rendered from the first three words. Defaults to the current corpus."
+---
+
+`get_text_formats()` shows every text encoding format registered in a corpus and renders a short preview of each using the corpus's first three words. Use it to discover which format names you can pass as the `fmt` argument to `search()` and `get_passages()`. Different formats may offer original-script text, transliterations, plain transcriptions, or morphological representations depending on the corpus.
+
+## Parameters
+
+<ParamField query="corpus" type="string">
+  Corpus name. When omitted, the currently active corpus is used. Use `list_corpora()` to see available names.
+</ParamField>
+
+## Returns
+
+A formatted string that begins with `"Available text formats:"` followed by one entry per format. Each entry shows the format name on one line and a `sample:` preview indented below it. The preview is the rendered text of the first three words in the corpus for that format, shown as a Python-style quoted string.
+
+Returns `"Text formats unavailable for this corpus."` if the corpus does not expose format information, or `"No text formats defined."` if the format dictionary is empty.
+
+## Example
+
+```python
+result = get_text_formats(corpus="BHSA")
+print(result)
+```
+
+Expected output:
+
+```
+Available text formats:
+  text-orig-full
+    sample: 'בְּרֵאשִׁ֖ית בָּרָ֣א אֱלֹהִ֑ים'
+  text-trans-plain
+    sample: 'In beginning created God'
+  text-phono-full
+    sample: 'bərēšîṯ bārāʾ ʾĕlōhîm'
+```

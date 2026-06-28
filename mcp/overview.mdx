@@ -1,0 +1,74 @@
+---
+title: "Context Fabric MCP Server: 11 Corpus Tools for AI"
+sidebarTitle: "Overview"
+description: "The cf-mcp server exposes 11 tools to AI assistants via the Model Context Protocol. Start it with a corpus path; connect any MCP-compatible client."
+---
+
+The `cf-mcp` command starts a FastMCP 2 server that exposes 11 corpus query tools to any MCP-compatible AI client. Assistants like Claude and GPT can use these tools to search annotated religious texts, retrieve passages, inspect node features, and paginate large result sets — all through the Model Context Protocol without writing a single line of Python.
+
+## The 11 Tools
+
+| Category  | Tool                  | Description                                              |
+|-----------|-----------------------|----------------------------------------------------------|
+| Discovery | `list_corpora`        | List loaded corpora and the active one                   |
+| Discovery | `describe_corpus`     | Node types with counts, section hierarchy                |
+| Discovery | `list_features`       | Browse features, filter by node type                     |
+| Discovery | `describe_feature`    | Metadata + top values by frequency                       |
+| Discovery | `get_text_formats`    | Available text encodings with samples                    |
+| Search    | `search`              | Pattern search — results / count / statistics / passages |
+| Search    | `search_continue`     | Paginate large result sets via cursor                    |
+| Search    | `search_csv`          | Export results to a local CSV file                       |
+| Search    | `search_syntax_guide` | Inline query syntax documentation                        |
+| Data      | `get_passages`        | Retrieve text by section reference                       |
+| Data      | `get_node_features`   | Batch feature lookup for a list of nodes                 |
+
+## Starting the Server
+
+Pass at least one `--corpus` flag pointing to a local corpus directory. The server defaults to `stdio` transport, which is the right choice for Claude Desktop and other local MCP clients.
+
+```bash
+# stdio — for Claude Desktop and other local MCP clients
+uv run cf-mcp --corpus ~/.exegia/datasets/bibles/BHSA
+
+# SSE on port 8000 — for remote/desktop app connections
+uv run cf-mcp --corpus ~/.exegia/datasets/bibles/BHSA --sse 8000
+
+# Streamable HTTP on port 8000
+uv run cf-mcp --corpus ~/.exegia/datasets/bibles/BHSA --http 8000
+```
+
+## Server Instructions
+
+When a client first connects, the server sends this instruction string to orient the AI agent:
+
+> "Query annotated text corpora via Context-Fabric. Start with `describe_corpus()` to understand the structure, then `list_features()` to see what data is available, then `search()` with a template to find patterns, then `get_passages()` to read the matching text."
+
+This primes the agent with the recommended discovery-first workflow before it makes any tool calls.
+
+## Programmatic Use
+
+You can embed the MCP server directly in a Python script by importing `mcp` and `corpus_manager` from the `exegia.mcp` package:
+
+```python
+from exegia.mcp import mcp, corpus_manager
+
+corpus_manager.load("~/.exegia/datasets/bibles/BHSA", name="BHSA")
+mcp.run(transport="sse", host="localhost", port=8000)
+```
+
+`corpus_manager.load()` resolves the path, loads the corpus via Context-Fabric, and registers it as the default. Calling `mcp.run()` blocks and serves requests until the process is terminated.
+
+<CardGroup cols={2}>
+  <Card title="Transports" icon="plug" href="/mcp/transports">
+    stdio, SSE, and streamable HTTP — when to use each and how to configure them.
+  </Card>
+  <Card title="Multi-Corpus" icon="layer-group" href="/mcp/multi-corpus">
+    Load multiple named corpora in one server session and switch between them.
+  </Card>
+  <Card title="AI Workflow" icon="route" href="/mcp/workflow">
+    The recommended six-step sequence for AI agents exploring a corpus.
+  </Card>
+  <Card title="Search Tool" icon="magnifying-glass" href="/api/tools/search">
+    Full reference for the `search()` tool and its return types.
+  </Card>
+</CardGroup>

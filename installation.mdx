@@ -1,0 +1,108 @@
+---
+title: "Installing corpora-py and Its Dependencies"
+sidebarTitle: "Installation"
+description: "Install the corpora-py package with uv or pip, configure your environment variables, and verify the cf-mcp CLI is available."
+---
+
+`corpora-py` is a standard Python package published to PyPI. It requires Python 3.13 or later and ships a CLI entry point (`cf-mcp`) that you can run immediately after installation. This page covers system requirements, installation methods, environment variable configuration, and how to install from source for development.
+
+## Requirements
+
+Before installing, confirm your environment meets the following prerequisites:
+
+- **Python 3.13+** — required by `corpora-py` and its dependencies.
+- **[uv](https://docs.astral.sh/uv/) >= 0.9** — recommended for dependency management and running scripts. Not required if you use `pip` directly.
+- **git** — required only if you plan to fetch corpus datasets from GitHub using `exegia.corpus.fetch_from_git`.
+
+## Install with uv (Recommended)
+
+```bash
+uv add corpora-py
+```
+
+`uv add` resolves and pins the package into your project's `uv.lock` file and installs it into the project virtual environment.
+
+## Install with pip
+
+```bash
+pip install corpora-py
+```
+
+## Verify Installation
+
+After installing, confirm that the `cf-mcp` CLI entry point is available:
+
+```bash
+uv run cf-mcp --help
+```
+
+Expected output:
+
+```text
+usage: cf-mcp [-h] [--corpus PATH] [--name NAME] [--features FEAT [FEAT ...]]
+              [--sse PORT] [--http PORT] [--host HOST] [--verbose]
+```
+
+If you installed with `pip` into an active virtual environment, run `cf-mcp --help` directly (without `uv run`).
+
+## Dependencies
+
+`corpora-py` installs the following key dependencies automatically:
+
+| Package | Version | Purpose |
+|---|---|---|
+| `fastmcp` | >=2.0 | MCP server framework |
+| `context-fabric` | >=0.5.0 | Graph corpus engine (`cfabric`) |
+| `text-fabric` | >=13.0.0 | Text-Fabric annotation layer |
+| `httpx` | >=0.27.0 | HTTP client |
+| `pydantic` | >=2.0.0 | Data validation and schemas |
+| `pydantic-settings` | >=2.0.0 | Environment-based configuration |
+| `ebooklib` | >=0.18 | EPUB parsing for book import |
+| `beautifulsoup4` | >=4.12.0 | HTML parsing for book import |
+| `supabase` | >=2.31.0 | Auth and storage backend |
+
+## Environment Setup
+
+Some features — particularly `exegia.auth` — read configuration from a `.env` file. Copy the provided example and fill in any values you need:
+
+```bash
+cp .env.example .env
+```
+
+Key environment variables:
+
+| Variable | Required | Description |
+|---|---|---|
+| `SUPABASE_URL` | Auth only | Your Supabase project URL |
+| `SUPABASE_ANON_KEY` | Auth only | Supabase anonymous (public) API key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Auth only | Supabase service role key (bypasses RLS) |
+| `DATASETS_BASE_PATH` | Optional | Override the default `~/.exegia/datasets/` base path |
+| `ENVIRONMENT` | Optional | `development`, `staging`, or `production` (default: `development`) |
+
+Configuration is loaded at import time by `pydantic-settings` from `.env.{ENVIRONMENT}`. For example, if `ENVIRONMENT=production`, the library reads `.env.production`.
+
+<Note>
+  The `SUPABASE_*` environment variables are only required if you use the `exegia.auth` module. The MCP server (`cf-mcp`) and all 11 corpus tools work without any environment variables configured — they only need a corpus path passed via `--corpus`.
+</Note>
+
+## Development Install (From Source)
+
+To install from source and run tests or contribute changes:
+
+```bash
+git clone https://github.com/exegia/corpora-py
+cd corpora-py
+uv run scripts/setup.py
+```
+
+`setup.py` installs all dependencies (including `dotenvx` for encrypted `.env` support) and prepares the development environment. After setup, the full test suite runs with:
+
+```bash
+uv run pytest
+```
+
+To build a distributable wheel:
+
+```bash
+uv build --out-dir dist/
+```

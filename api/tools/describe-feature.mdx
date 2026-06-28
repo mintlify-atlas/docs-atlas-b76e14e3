@@ -1,0 +1,54 @@
+---
+title: "describe_feature(): Feature metadata and top values"
+sidebarTitle: "describe_feature"
+description: "Returns metadata and top-N values by frequency for a named feature. Accepts feature name, optional sample size, and optional corpus name."
+---
+
+`describe_feature()` gives you detailed information about a single feature: its stored metadata (such as a human-readable description and value type) and its most frequent values ranked by occurrence count. Use this tool when you need to know what values a feature can take before writing a search template, or when you want to validate that a feature name is correct and understand its data distribution.
+
+## Parameters
+
+<ParamField query="feature" type="string" required>
+  The name of the feature to inspect (e.g. `"lex"`, `"pos"`, `"gloss"`). Must exactly match a feature present in the corpus. Use `list_features()` to discover valid names.
+</ParamField>
+
+<ParamField query="sample_size" type="integer">
+  How many top values to include in the frequency list, ordered from most to least common. Defaults to `20`.
+</ParamField>
+
+<ParamField query="corpus" type="string">
+  Corpus name. When omitted, the currently active corpus is used.
+</ParamField>
+
+## Returns
+
+A multi-line formatted string with three sections:
+
+- **Feature** — the name of the feature as requested.
+- **Metadata** — key/value pairs drawn from the feature's stored metadata (e.g. `description`, `valueType`). Shows `(none)` when no metadata is stored.
+- **Top N values** — a frequency table of the `sample_size` most common values, with each value left-aligned in a 30-character column and its occurrence count right-aligned with comma formatting.
+
+If the feature name is not found, returns `"Feature '<name>' not found."`.
+
+## Example
+
+```python
+result = describe_feature(feature="lex", sample_size=5)
+print(result)
+```
+
+Expected output:
+
+```
+Feature: lex
+Metadata:
+  description: Lexeme
+  valueType: str
+
+Top 5 values (value / count):
+  'H'                              8,632
+  'W'                              5,421
+  'B'                              4,804
+  'L'                              3,927
+  'MN'                             2,510
+```

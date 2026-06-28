@@ -1,0 +1,66 @@
+---
+title: "list_features(): Browse available features"
+sidebarTitle: "list_features"
+description: "Lists corpus features with optional filtering by node type or kind. Returns up to 50 names by default with a truncation notice when more exist."
+---
+
+`list_features()` returns an alphabetically sorted list of feature names available in a corpus. You can narrow the results by node type (to see only features that appear on, say, `word` nodes) or by feature kind (`"node"` or `"edge"`). Use this tool after `describe_corpus()` to discover which feature names you can use in search templates or pass to `describe_feature()` and `get_node_features()`.
+
+## Parameters
+
+<ParamField query="node_type" type="string">
+  Filter the list to features that have at least one value on this node type (e.g. `"word"`, `"verse"`). When omitted, features for all node types are included.
+</ParamField>
+
+<ParamField query="kind" type="string">
+  Filter by feature kind. Accepted values are `"node"` (features stored on individual nodes) and `"edge"` (features stored on directed edges between nodes). When omitted, both kinds are returned.
+</ParamField>
+
+<ParamField query="limit" type="integer">
+  Maximum number of feature names to return. Defaults to `50`. Increase this if you need to see more names in one call.
+</ParamField>
+
+<ParamField query="corpus" type="string">
+  Corpus name. When omitted, the currently active corpus is used.
+</ParamField>
+
+## Returns
+
+A formatted string beginning with `"Features:"` followed by the matching feature names, one per line, indented by two spaces. When the total number of matching features exceeds `limit`, a `(showing N of M)` suffix is appended so you know more exist.
+
+```
+Features:
+  book
+  chapter
+  freq
+  gloss
+  lex
+  pos
+  verse
+(showing 7 of 80)
+```
+
+## Example
+
+```python
+# List word-level features only, up to 10
+result = list_features(node_type="word", limit=10)
+print(result)
+```
+
+Expected output:
+
+```
+Features:
+  freq
+  gloss
+  lex
+  nu
+  pdp
+  pos
+  sp
+  st
+  typ
+  vbe
+(showing 10 of 34)
+```

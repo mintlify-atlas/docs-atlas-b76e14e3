@@ -1,0 +1,73 @@
+---
+title: "Context Fabric: Query Annotated Religious Texts with AI"
+sidebarTitle: "Introduction"
+description: "Context Fabric is a Python library and MCP server that exposes graph-annotated biblical and religious text corpora to AI assistants and developers via 11 query tools."
+---
+
+Context Fabric (`corpora-py`) is a Python library and [FastMCP](https://github.com/jlowin/fastmcp) server that gives AI assistants and developers structured, queryable access to annotated religious text corpora. Every word, verse, chapter, and book is represented as a typed node in a graph, carrying features such as lemma, morphology, and gloss — enabling precise linguistic and structural queries that plain text search cannot match. The package ships 11 ready-to-use tools and supports multiple transports so you can embed it in Claude Desktop, connect a remote client over SSE, or call it directly from Python.
+
+## What is Context Fabric?
+
+Context Fabric is built on top of [Text-Fabric](https://annotation.github.io/text-fabric/) (TF), a library for processing large annotated text databases represented as feature files. The `context-fabric` package (`cfabric`) wraps Text-Fabric to provide a higher-level corpus API.
+
+In a Text-Fabric dataset, a **corpus** is a collection of numbered nodes. Each node has a type — `word`, `verse`, `chapter`, `book`, and so on — and a set of named **features** that store annotation values for that node. For example:
+
+- A `word` node in the Hebrew Bible might carry `lex` (lexeme), `pos` (part of speech), `gloss` (English gloss), `sp` (morphological species), and `vt` (verbal tense).
+- A `verse` node carries `book`, `chapter`, and `verse` reference features.
+- Containment (a verse contains words) and adjacency are first-class relationships queryable via a template language.
+
+`CorpusManager` — the singleton at the heart of the MCP server — wraps a `cfabric.Fabric` instance and its loaded API object. All 11 tools call `corpus_manager.get_api()` to reach `api.S` (search), `api.F` (feature access), `api.T` (text and section traversal), and so on.
+
+## Supported Corpora
+
+Context Fabric can load any dataset that is a valid Text-Fabric directory — one containing both `otext.tf` and `otype.tf`. Several well-known open corpora are directly compatible:
+
+| Corpus | Description |
+|---|---|
+| **BHSA** | Hebrew Bible (Biblia Hebraica Stuttgartensia Amstelodamensis) — rich morphological annotation |
+| **GNT** | Greek New Testament — word-level parsing and lemmatization |
+| **Quran** | Arabic Quran with morphological tagging |
+| **Tanakh** | Hebrew scriptures in TF format |
+| Commentaries | Rabbinic or patristic commentary texts |
+| Lexicons & dictionaries | Strong's, BDB, and other reference works |
+| Custom books | Any EPUB or HTML converted to TF via `exegia.utils` |
+
+The `BookCategory` enum in `exegia.models` classifies corpora by type: `bible`, `quran`, `tanakh`, `commentary`, `lexicon`, `dictionary`, `devotional`, `theology`, `history`, `philosophy`, `fiction`, and `other`.
+
+## Two Surfaces
+
+Context Fabric exposes corpus data through two surfaces that share the same underlying `CorpusManager`:
+
+**MCP server (FastMCP)** — The `cf-mcp` CLI starts a server that speaks the [Model Context Protocol](https://modelcontextprotocol.io). AI assistants such as Claude can discover and call all 11 tools without any custom integration code. The server supports stdio (for Claude Desktop), SSE, and streamable HTTP transports.
+
+**Python library** — Every tool is also a plain Python function. Import `exegia.mcp`, load a corpus via `corpus_manager.load()`, and call tools directly in scripts, notebooks, or your own application.
+
+## Package Modules
+
+The `exegia` namespace is organized into focused modules:
+
+| Module | Purpose |
+|---|---|
+| `exegia.mcp` | FastMCP server — 11 corpus tools for AI clients |
+| `exegia.corpus` | Fetch TF datasets from git repositories |
+| `exegia.utils` | EPUB / HTML → Text-Fabric converters |
+| `exegia.models` | Shared enums and data model definitions |
+| `exegia.schemas` | Pydantic request/response schemas |
+| `exegia.auth` | Authentication utilities |
+
+## Where to Go Next
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="bolt" href="/quickstart">
+    Install corpora-py, download a corpus, and run your first query in under 5 minutes.
+  </Card>
+  <Card title="MCP Server" icon="server" href="/mcp/overview">
+    Learn how to start the server, choose a transport, and connect AI clients.
+  </Card>
+  <Card title="Corpus Datasets" icon="database" href="/corpus/datasets">
+    Browse supported corpora and learn how to fetch them from git.
+  </Card>
+  <Card title="API Reference" icon="code" href="/api/tools/search">
+    Explore all 11 tool signatures, parameters, and return formats.
+  </Card>
+</CardGroup>

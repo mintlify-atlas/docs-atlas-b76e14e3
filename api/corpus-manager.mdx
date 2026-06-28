@@ -1,0 +1,170 @@
+---
+title: "CorpusManager: Load and Manage TF Corpora in Python"
+sidebarTitle: "CorpusManager"
+description: "CorpusManager is the singleton that loads, stores, and retrieves Text-Fabric corpus instances. Access it via exegia.mcp.corpus_manager."
+---
+
+`CorpusManager` manages a collection of named Text-Fabric (Context-Fabric) corpora. It holds `(Fabric, api)` pairs keyed by name, giving you a single object that controls which corpus is active and how to access its API. The module-level singleton `corpus_manager` is pre-instantiated at import time and is used internally by all 11 MCP tools — you can also use it directly in scripts.
+
+## Import
+
+```python
+from exegia.mcp import corpus_manager
+# or
+from exegia.mcp.corpus import corpus_manager
+```
+
+---
+
+## Methods
+
+### load(path, name=None, features=None)
+
+```python
+corpus_manager.load(
+    path: str,
+    name: str | None = None,
+    features: list[str] | None = None,
+) -> str
+```
+
+Loads a Text-Fabric corpus from a local directory. Wraps `cfabric.Fabric` and calls either `tf.load(features)` or `tf.loadAll()` depending on whether `features` is supplied. Sets the loaded corpus as `current` if it is the first corpus loaded into this manager instance.
+
+<ParamField path="path" type="str" required>
+  Path to the directory containing `.tf` files. Expanded with `Path.expanduser()` and resolved to an absolute path before use.
+</ParamField>
+
+<ParamField path="name" type="str | None">
+  Human-readable name to register the corpus under. Defaults to the basename of `path`.
+</ParamField>
+
+<ParamField path="features" type="list[str] | None">
+  Explicit list of feature names to load (e.g. `["otype", "lex", "g_word"]`). When omitted, all features are loaded via `loadAll()`.
+</ParamField>
+
+<ResponseField name="returns" type="str">
+  The corpus name used to register it (either the value passed as `name` or the directory basename).
+</ResponseField>
+
+**Raises**
+
+| Exception | Condition |
+|---|---|
+| `FileNotFoundError` | `path` does not exist on disk |
+| `RuntimeError` | `cfabric.Fabric.load()` returns `False` |
+| `ImportError` | `context-fabric` is not installed |
+
+---
+
+### get_api(name=None)
+
+```python
+corpus_manager.get_api(name: str | None = None) -> Any
+```
+
+Returns the Text-Fabric API object for the named corpus. When `name` is omitted, the currently active corpus is used. The returned object exposes the standard TF API surfaces: `api.S` (search), `api.F` (features), `api.T` (text), `api.L` (locality), and others.
+
+<ParamField path="name" type="str | None">
+  Name of the corpus to retrieve. Defaults to `corpus_manager.current`.
+</ParamField>
+
+<ResponseField name="returns" type="Any">
+  The Text-Fabric API object for the requested corpus.
+</ResponseField>
+
+**Raises**
+
+| Exception | Condition |
+|---|---|
+| `RuntimeError` | No corpus has been loaded yet |
+| `KeyError` | A named corpus was requested but is not registered |
+
+---
+
+### list_corpora()
+
+```python
+corpus_manager.list_corpora() -> list[str]
+```
+
+Returns a list of all corpus names that are currently loaded in the manager, in insertion order.
+
+<ResponseField name="returns" type="list[str]">
+  Ordered list of loaded corpus names.
+</ResponseField>
+
+---
+
+### select(name)
+
+```python
+corpus_manager.select(name: str) -> None
+```
+
+Sets the named corpus as the active default for all subsequent calls that do not specify a `name`. Does not reload or modify the corpus data.
+
+<ParamField path="name" type="str" required>
+  Name of a corpus that is already loaded.
+</ParamField>
+
+**Raises**
+
+| Exception | Condition |
+|---|---|
+| `KeyError` | The corpus has not been loaded |
+
+---
+
+### unload(name)
+
+```python
+corpus_manager.unload(name: str) -> None
+```
+
+Removes a corpus from the manager and frees the reference to its `(Fabric, api)` tuple. If the removed corpus was the active `current`, resets `current` to the next corpus in the registration order, or `None` if nothing remains.
+
+<ParamField path="name" type="str" required>
+  Name of the corpus to remove.
+</ParamField>
+
+**Raises**
+
+| Exception | Condition |
+|---|---|
+| `KeyError` | The corpus has not been loaded |
+
+---
+
+## Property
+
+### current
+
+```python
+corpus_manager.current  # str | None
+```
+
+Read-only property. Returns the name of the currently active corpus, or `None` when no corpus has been loaded. The active corpus is used as the default target by `get_api()` and all MCP tools.
+
+---
+
+## Full example
+
+```python
+from exegia.mcp import mcp, corpus_manager
+
+# Load multiple corpora
+corpus_manager.load("~/.exegia/datasets/bibles/BHSA", name="BHSA")
+corpus_manager.load("~/.exegia/datasets/bibles/GNT",  name="GNT")
+
+# Switch active corpus
+corpus_manager.select("GNT")
+print(corpus_manager.current)  # "GNT"
+
+# Get TF API and use it directly
+api = corpus_manager.get_api("BHSA")
+print(api.F.otype.freqList()[:5])
+
+# Unload a corpus from memory
+corpus_manager.unload("GNT")
+print(corpus_manager.list_corpora())  # ["BHSA"]
+```

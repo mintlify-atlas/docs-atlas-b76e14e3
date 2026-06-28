@@ -1,0 +1,194 @@
+---
+title: "Data Models: BookCategory, BookSourceType, SectionType"
+sidebarTitle: "Models"
+description: "Enumerations and data models from exegia.models: BookCategory (bible, quran, tanakh...), BookSourceType (epub, pdf, url, manual), and SectionType."
+---
+
+The `exegia.models` module defines shared enumerations and data model types used across the library. All enumerations inherit from both `str` and `enum.Enum`, so their values are plain strings that compare equal to their string literals and serialise naturally to JSON.
+
+---
+
+## BookCategory
+
+```python
+from exegia.models.enums import BookCategory
+```
+
+Classifies a library book by its genre or tradition. Used as metadata on imported corpora.
+
+```python
+class BookCategory(str, enum.Enum):
+    BIBLE      = "bible"
+    QURAN      = "quran"
+    TANAKH     = "tanakh"
+    COMMENTARY = "commentary"
+    LEXICON    = "lexicon"
+    DICTIONARY = "dictionary"
+    DEVOTIONAL = "devotional"
+    THEOLOGY   = "theology"
+    HISTORY    = "history"
+    PHILOSOPHY = "philosophy"
+    FICTION    = "fiction"
+    OTHER      = "other"
+```
+
+| Member | Value | Description |
+|---|---|---|
+| `BIBLE` | `"bible"` | Bible texts |
+| `QURAN` | `"quran"` | Quran |
+| `TANAKH` | `"tanakh"` | Hebrew Bible / Tanakh |
+| `COMMENTARY` | `"commentary"` | Rabbinical, patristic, and modern commentaries |
+| `LEXICON` | `"lexicon"` | Lexical databases |
+| `DICTIONARY` | `"dictionary"` | Theological dictionaries |
+| `DEVOTIONAL` | `"devotional"` | Devotional literature |
+| `THEOLOGY` | `"theology"` | Systematic theology |
+| `HISTORY` | `"history"` | Historical texts |
+| `PHILOSOPHY` | `"philosophy"` | Philosophical works |
+| `FICTION` | `"fiction"` | Literary fiction |
+| `OTHER` | `"other"` | Catch-all for uncategorised texts |
+
+**Usage example**
+
+```python
+from exegia.models.enums import BookCategory
+
+category = BookCategory.COMMENTARY
+print(category)         # BookCategory.COMMENTARY
+print(category.value)   # "commentary"
+print(category == "commentary")  # True
+```
+
+---
+
+## BookSourceType
+
+```python
+from exegia.models.enums import BookSourceType
+```
+
+Identifies how a book was originally obtained or ingested into the library.
+
+```python
+class BookSourceType(str, enum.Enum):
+    EPUB   = "epub"
+    PDF    = "pdf"
+    URL    = "url"
+    MANUAL = "manual"
+```
+
+| Member | Value | Description |
+|---|---|---|
+| `EPUB` | `"epub"` | EPUB ebook file |
+| `PDF` | `"pdf"` | PDF document |
+| `URL` | `"url"` | Imported from a web URL |
+| `MANUAL` | `"manual"` | Manually created dataset |
+
+**Usage example**
+
+```python
+from exegia.models.enums import BookSourceType
+
+source = BookSourceType.EPUB
+print(source.value)  # "epub"
+```
+
+---
+
+## SectionType
+
+```python
+from exegia.models.enums import SectionType
+```
+
+Classifies a node in the `book_sections` content hierarchy. Sections are self-referential, so any combination of these types can appear at any nesting level.
+
+```python
+class SectionType(str, enum.Enum):
+    PART         = "part"
+    CHAPTER      = "chapter"
+    SECTION      = "section"
+    ARTICLE      = "article"
+    ENTRY        = "entry"
+    APPENDIX     = "appendix"
+    INTRODUCTION = "introduction"
+    PREFACE      = "preface"
+    FOREWORD     = "foreword"
+    INDEX        = "index"
+    GLOSSARY     = "glossary"
+    OTHER        = "other"
+```
+
+| Member | Value | Description |
+|---|---|---|
+| `PART` | `"part"` | Top-level book part |
+| `CHAPTER` | `"chapter"` | Chapter |
+| `SECTION` | `"section"` | Section within a chapter |
+| `ARTICLE` | `"article"` | Article (e.g. in a journal or commentary) |
+| `ENTRY` | `"entry"` | Dictionary or lexicon entry |
+| `APPENDIX` | `"appendix"` | Appendix |
+| `INTRODUCTION` | `"introduction"` | Introduction |
+| `PREFACE` | `"preface"` | Preface |
+| `FOREWORD` | `"foreword"` | Foreword |
+| `INDEX` | `"index"` | Index |
+| `GLOSSARY` | `"glossary"` | Glossary |
+| `OTHER` | `"other"` | Catch-all for unclassified sections |
+
+---
+
+## Book content hierarchy
+
+The `exegia.models.book` module describes three generic tables used for modeling any imported book, regardless of its internal structure.
+
+**`library_books`** — top-level catalog entry for any imported book. Stores authorship, category, source type, and links to the underlying corpus.
+
+**`book_sections`** — a self-referential node in the content hierarchy. Handles any depth by referencing a parent section. Books with a flat structure simply have no child sections. The `type` column holds a `SectionType` value and `level` (0-based) records the nesting depth.
+
+**`book_pages`** — the smallest addressable content unit: a spine item, a page, a verse-equivalent, or a dictionary entry. References its containing section (or `null` for flat books).
+
+**Hierarchy examples**
+
+A book with chapters:
+
+```
+LibraryBook
+  └─ BookSection(type=chapter, level=0)
+       └─ BookPage(s)
+```
+
+A flat book with no chapters:
+
+```
+LibraryBook
+  └─ BookPage(s)        # section_uuid = None
+```
+
+A deeply nested book:
+
+```
+LibraryBook
+  └─ BookSection(type=part,    level=0)
+       └─ BookSection(type=chapter, level=1)
+            └─ BookSection(type=section, level=2)
+                 └─ BookPage(s)
+```
+
+**Usage example**
+
+```python
+from exegia.models.enums import BookCategory, BookSourceType, SectionType
+
+# Filter books by category
+def is_scriptural(category: BookCategory) -> bool:
+    return category in {
+        BookCategory.BIBLE,
+        BookCategory.TANAKH,
+        BookCategory.QURAN,
+    }
+
+# Build a section record
+section_data = {
+    "type": SectionType.CHAPTER.value,
+    "level": 0,
+    "title": "Chapter 1",
+}
+```

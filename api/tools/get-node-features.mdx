@@ -1,0 +1,55 @@
+---
+title: "get_node_features(): Batch feature lookup by node ID"
+sidebarTitle: "get_node_features"
+description: "Looks up named feature values for a list of integer node IDs. Returns a formatted table with node ID, section reference, and one column per feature. Max 100 nodes."
+---
+
+`get_node_features()` performs a batch lookup of feature values for a set of node IDs that you already have — typically collected from `search()` results or a CSV export. You specify which features you want as columns, and the tool returns a fixed-width table with the node ID, its section reference, and one column per feature. Use this to enrich a list of nodes with linguistic or structural annotation without running a new search. Maximum **100 nodes** per call.
+
+## Parameters
+
+<ParamField query="nodes" type="integer[]" required>
+  List of integer node IDs to look up (e.g. `[1234, 1289, 5402]`). Any nodes beyond the hundredth are silently ignored. Node IDs are corpus-specific integers — you obtain them from `search()` results or CSV exports.
+</ParamField>
+
+<ParamField query="features" type="string[]" required>
+  Feature names to include as columns in the output table (e.g. `["lex", "pos", "gloss"]`). All names must exist in the corpus. If any name is unknown, the tool returns an error listing the unrecognised names without producing a table.
+</ParamField>
+
+<ParamField query="corpus" type="string">
+  Corpus name. When omitted, the currently active corpus is used.
+</ParamField>
+
+## Returns
+
+A fixed-width plain-text table. The header row contains `node`, `section`, and one column per feature name. A separator line of dashes follows, then one data row per node. Section references are left-aligned in a 20-character column; feature values are left-aligned in 10-character columns.
+
+```
+    node  section                lex        pos        gloss
+-------------------------------------------------------------------
+    1234  Genesis 1 1            BRʾ[       verb       create
+    1289  Genesis 1 2            HJH[       verb       be
+```
+
+Returns `"Unknown features: ['<name>', ...]"` if any requested feature is not found in the corpus. Use `list_features()` to verify feature names.
+
+## Example
+
+```python
+result = get_node_features(
+    nodes=[1234, 1289, 5402],
+    features=["lex", "pos", "gloss"],
+    corpus="BHSA",
+)
+print(result)
+```
+
+Expected output:
+
+```
+    node  section                lex        pos        gloss
+-------------------------------------------------------------------
+    1234  Genesis 1 1            BRʾ[       verb       create
+    1289  Genesis 1 2            HJH[       verb       be
+    5402  Genesis 1 9            QWH[       verb       wait
+```

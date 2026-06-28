@@ -1,72 +1,105 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
-  "name": "Mintlify Starter Kit",
+  "name": "Context Fabric",
+  "theme": "luma",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#cca46c"
   },
-  "favicon": "/favicon.svg",
-  "navigation": {
-    "pages": [
-      {
-        "group": "Getting Started",
-        "pages": [
-          "index",
-          "quickstart"
-        ]
-      }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
-  },
+  "favicon": "https://media.brand.dev/5c08602f-4bed-4a82-abb2-2519a5630380.svg",
   "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
+    "light": "https://media.brand.dev/5ea030a6-235a-4a98-99a6-e5c33104014b.svg",
+    "dark": "https://media.brand.dev/5ea030a6-235a-4a98-99a6-e5c33104014b.svg"
   },
   "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
-      }
-    ],
     "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://app.mintlify.com"
+      "type": "github",
+      "href": "https://github.com/exegia/corpora-py"
     }
-  },
-  "contextual": {
-    "options": [
-      "copy",
-      "view",
-      "chatgpt",
-      "claude",
-      "perplexity",
-      "mcp",
-      "cursor",
-      "vscode"
-    ]
   },
   "footer": {
     "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
+      "github": "https://github.com/exegia/corpora-py"
     }
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "installation"
+            ]
+          },
+          {
+            "group": "MCP Server",
+            "pages": [
+              "mcp/overview",
+              "mcp/transports",
+              "mcp/multi-corpus",
+              "mcp/workflow"
+            ]
+          },
+          {
+            "group": "Corpus Management",
+            "pages": [
+              "corpus/datasets",
+              "corpus/fetch-from-git",
+              "corpus/epub-to-tf",
+              "corpus/html-to-tf",
+              "corpus/exg-format"
+            ]
+          },
+          {
+            "group": "Authentication",
+            "pages": [
+              "auth/overview",
+              "auth/sign-in",
+              "auth/sign-up"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "configuration/environment",
+              "configuration/settings"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "MCP Tools",
+            "pages": [
+              "api/tools/list-corpora",
+              "api/tools/describe-corpus",
+              "api/tools/list-features",
+              "api/tools/describe-feature",
+              "api/tools/get-text-formats",
+              "api/tools/search",
+              "api/tools/search-continue",
+              "api/tools/search-csv",
+              "api/tools/search-syntax-guide",
+              "api/tools/get-passages",
+              "api/tools/get-node-features"
+            ]
+          },
+          {
+            "group": "Python API",
+            "pages": [
+              "api/corpus-manager",
+              "api/converters",
+              "api/auth-api",
+              "api/models"
+            ]
+          }
+        ]
+      }
+    ]
   }
 }

@@ -1,0 +1,105 @@
+---
+title: "Packaging Corpora as Distributable .exg Files"
+sidebarTitle: ".exg Format"
+description: "The .exg format packages a Text-Fabric dataset into a single distributable zip archive with manifest.json, index.json, a git history stub, and the compressed corpus."
+---
+
+The `.exg` format is a zip archive that bundles a Text-Fabric dataset with structured metadata for distribution and future versioning. Inside the archive you will find a `manifest.json` with rich corpus metadata extracted from `otext.tf` and `otype.tf`, an `index.json` listing every `.tf` file with its size, an empty git repository reserved for future diff and versioning features, and a `corpus.exgc` file which is the compressed TF dataset itself.
+
+## Archive Layout
+
+```
+{name}.exg          (zip archive)
+├── manifest.json   (corpus metadata extracted from otext.tf / otype.tf)
+├── index.json      (list of .tf files with sizes)
+├── .git/           (empty git repo for versioning)
+└── corpus.exgc     (zip of the original .tf dataset directory)
+```
+
+## Function Signature
+
+```python
+from exegia.utils.convert_to_exg import convert_to_exg
+from pathlib import Path
+
+def convert_to_exg(
+    dataset_dir: Path,
+    destination: Path,
+) -> Path:
+    ...
+```
+
+## Parameters
+
+<ParamField path="dataset_dir" type="Path" required>
+  Path to the Text-Fabric dataset directory. Must contain both `otext.tf` and `otype.tf` at the top level. The directory name becomes the stem of the output `.exg` filename.
+</ParamField>
+
+<ParamField path="destination" type="Path" required>
+  Directory where the produced `.exg` file will be saved. Created automatically if it does not exist.
+</ParamField>
+
+## Returns
+
+`Path` — path to the produced `.exg` file, e.g. `./dist/BHSA.exg`.
+
+## Raises
+
+- `FileNotFoundError` — if `dataset_dir` does not exist or is not a directory.
+- `ValueError` — if either `otext.tf` or `otype.tf` is missing from `dataset_dir`.
+
+## Example
+
+```python
+from pathlib import Path
+from exegia.utils.convert_to_exg import convert_to_exg
+
+exg_path = convert_to_exg(
+    dataset_dir=Path("~/.exegia/datasets/bibles/BHSA").expanduser(),
+    destination=Path("./dist/"),
+)
+print(f"Package created: {exg_path}")
+# Package created: dist/BHSA.exg
+```
+
+## Packaging Steps
+
+<Steps>
+  <Step title="Parse TF headers → manifest.json">
+    Reads the `@key=value` header lines from `otext.tf` and `otype.tf` and assembles a structured `manifest.json`. Node types are extracted from the data section of `otype.tf`. Filesystem stats (file count, total size) are appended.
+  </Step>
+  <Step title="List .tf files → index.json">
+    Recursively finds every `.tf` file under `dataset_dir` and writes an `index.json` array with the relative path and byte size of each file.
+  </Step>
+  <Step title="Initialise empty git repository">
+    Runs `git init` in the staging directory to create a `.git/` stub. This is reserved for future corpus diff and version-tracking features.
+  </Step>
+  <Step title="Compress the dataset → corpus.exgc">
+    Zips the entire `dataset_dir` into `corpus.exgc`. This is a standard zip file with a `.exgc` extension — you can unzip it with any zip tool if you need to inspect or extract the raw `.tf` files.
+  </Step>
+  <Step title="Bundle everything → {name}.exg">
+    Zips the staging directory (containing `manifest.json`, `index.json`, `.git/`, and `corpus.exgc`) into the final `{dataset_dir.name}.exg` file in your `destination` directory.
+  </Step>
+</Steps>
+
+## manifest.json Fields
+
+The manifest is extracted automatically from the TF file headers. All fields are strings or lists of strings:
+
+| Field | Source | Description |
+|---|---|---|
+| `name` | `otext.tf @name` | Corpus name |
+| `version` | `otext.tf @version` | Corpus version |
+| `description` | `otext.tf @description` | Description |
+| `written_by` | `otext.tf @writtenBy` | Tool that wrote the TF files |
+| `date_written` | `otext.tf @dateWritten` | Date the TF files were written |
+| `section_types` | `otext.tf @sectionTypes` | Section hierarchy (comma-separated, split to list) |
+| `section_features` | `otext.tf @sectionFeatures` | Section feature names (comma-separated, split to list) |
+| `text_formats` | `otext.tf @fmt:*` | Available text format templates keyed by format name |
+| `node_types` | `otype.tf` data section | List of unique node types in order of appearance |
+| `tf_file_count` | Filesystem scan | Number of `.tf` files in the dataset |
+| `total_size_bytes` | Filesystem scan | Total size of all files in the dataset directory |
+
+<Note>
+  The `.exg` packaging step requires `git` to be installed and available on `PATH`. The `git init` call will raise `subprocess.CalledProcessError` if git is missing.
+</Note>

@@ -1,0 +1,132 @@
+---
+title: "Sign Up: Register Users and Link OAuth Identities"
+sidebarTitle: "Sign Up"
+description: "Create a public.users profile for an authenticated user, start an anonymous session, or upgrade an anonymous account by linking an Apple/Google identity."
+---
+
+Sign-up in Context Fabric means creating a `public.users` record for a user who has already authenticated. The `exegia.auth.signup` module provides helpers for all registration paths: converting a freshly authenticated user into a full application profile, starting an anonymous guest session, or linking an OAuth identity to upgrade an existing account.
+
+## Register an Already-Authenticated User
+
+If a user has just signed in via email OTP or an OIDC ID token and `result.needs_signup` is `True`, pass their session's access token to `sign_up()` to create the `public.users` record.
+
+```python
+from exegia.auth.signup import sign_up
+
+result = sign_up(
+    access_token="<user_jwt_from_signin>",
+    profile_fields={"display_name": "Alice"},  # optional extra columns
+)
+
+if result.ok:
+    print(result.current_user.id)
+elif result.already_registered:
+    print("User already has an account")
+```
+
+## Anonymous Sign-Up
+
+Pass `anonymous=True` to start a fresh anonymous session and immediately create a `public.users` record for that guest user in a single call.
+
+```python
+from exegia.auth.signup import sign_up
+
+result = sign_up(anonymous=True)
+
+if result.ok:
+    # An anonymous auth user and public.users record were both created
+    user = result.current_user
+    print(user.is_anonymous)   # True
+    print(user.is_permanent)   # False
+```
+
+## Start an Anonymous Session Only
+
+Use `start_anonymous_session` when you need a guest session without creating a `public.users` profile yet. This is the same underlying call as `sign_up(anonymous=True)`, but isolated so you can defer profile creation.
+
+```python
+from exegia.auth.signup import start_anonymous_session
+
+response = start_anonymous_session(data={"app_version": "1.0"})
+session = response.session
+```
+
+## Create a Profile Directly
+
+`create_user_profile` inserts a row into `public.users` using the service-role client. It bypasses RLS and is used internally by `sign_up()`, but you can also call it directly if you need fine-grained control.
+
+```python
+from exegia.auth.signup import create_user_profile
+
+profile = create_user_profile(
+    user_id="<auth_user_uuid>",
+    fields={"display_name": "Alice", "plan": "free"},
+)
+```
+
+## Link an OAuth Identity
+
+`link_identity_to_current_user` returns a provider authorization URL. Redirect the user to that URL to complete the link. This works for both upgrading an anonymous user (adding a permanent identity) and adding a second provider to an already-permanent user.
+
+```python
+from exegia.auth.current_user import link_identity_to_current_user
+
+oauth_response = link_identity_to_current_user(
+    access_token="<user_jwt>",
+    provider="google",
+    redirect_to="https://myapp.com/auth/callback",
+)
+# Redirect the user to oauth_response.url to complete linking
+```
+
+<Note>
+  Identity linking requires **Enable Manual Linking** to be turned on in your Supabase project's Auth settings. The user must have an active session, and the candidate identity must not already be linked to another user.
+</Note>
+
+## SignUpResult Fields
+
+<ResponseField name="ok" type="bool">
+  `True` if a new `public.users` record was created for the user. `False` when `already_registered` is set or an error occurred.
+</ResponseField>
+
+<ResponseField name="current_user" type="CurrentUser | None">
+  The combined auth identity and application profile. Set on success and also on the `already_registered` path (reflecting the existing record).
+</ResponseField>
+
+<ResponseField name="session" type="Session | None">
+  The Supabase session. Populated when `sign_up()` started an anonymous session via `anonymous=True`.
+</ResponseField>
+
+<ResponseField name="message" type="str | None">
+  A user-facing message. Set on all non-`ok` paths.
+</ResponseField>
+
+<ResponseField name="already_registered" type="bool">
+  `True` when the user already has a `public.users` record. No new record is created and `current_user` reflects the existing profile.
+</ResponseField>
+
+## `sign_up` Parameters
+
+<ParamField path="access_token" type="str">
+  JWT of an already-authenticated user. Use this when the user has just signed in via email OTP or an OIDC ID token. Optional — mutually exclusive with `anonymous=True`.
+</ParamField>
+
+<ParamField path="profile_fields" type="dict">
+  Extra columns to set on the `public.users` row at creation time. Keys must match your schema (e.g. `{"display_name": "Alice"}`). Optional.
+</ParamField>
+
+<ParamField path="anonymous" type="bool">
+  When `True`, start a fresh anonymous session first, then register that guest user. Defaults to `False`. Optional — mutually exclusive with `access_token`.
+</ParamField>
+
+<ParamField path="anonymous_metadata" type="dict">
+  `user_metadata` to attach to the anonymous user at creation. Only used when `anonymous=True`. Optional.
+</ParamField>
+
+<ParamField path="captcha_token" type="str">
+  CAPTCHA verification token for the anonymous sign-in step. Only used when `anonymous=True`. Optional.
+</ParamField>
+
+<Warning>
+  Exactly one of `access_token` or `anonymous=True` must be provided to `sign_up()`. Omitting both returns `SignUpResult(ok=False)` with a descriptive message and does not touch the database.
+</Warning>

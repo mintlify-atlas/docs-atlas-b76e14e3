@@ -1,0 +1,159 @@
+---
+title: "Sign In with Email OTP or Apple/Google OIDC"
+sidebarTitle: "Sign In"
+description: "Sign in users with a one-time email code or Apple/Google OIDC ID token. Both flows return a SignInResult with the user's CurrentUser and Supabase session."
+---
+
+The `exegia.auth.signin` module provides three functions covering the two main sign-in paths: email OTP (two-step) and OIDC ID token (one-step). After the provider authenticates the user, both paths run a `public.users` lookup and return a `SignInResult` — either a full authenticated payload or a `needs_signup` signal if no application profile exists yet.
+
+## Email OTP Flow
+
+The email OTP flow is two steps: first dispatch the code, then verify it. No session is created until the second step.
+
+<Steps>
+  <Step title="Send the one-time code">
+    Call `request_email_otp` with the user's email address. This triggers a magic-link email via Supabase Auth. No session or profile check happens at this stage.
+
+    ```python
+    from exegia.auth.signin import request_email_otp
+
+    response = request_email_otp(
+        email="user@example.com",
+        email_redirect_to="https://myapp.com/auth/callback",  # optional
+        should_create_user=False,  # optional
+    )
+    ```
+  </Step>
+  <Step title="Verify the code">
+    Pass the 6-digit code the user received to `verify_email_otp`. On success, the function looks up `public.users` and returns a `SignInResult`.
+
+    ```python
+    from exegia.auth.signin import verify_email_otp
+
+    result = verify_email_otp(email="user@example.com", token="123456")
+
+    if result.ok:
+        print(result.current_user.id)    # auth user UUID
+        print(result.current_user.email) # user email
+    elif result.needs_signup:
+        # User authenticated but has no public.users record
+        print(result.message)  # "No account is linked..."
+        # result.session is still set — pass it to sign_up() to complete registration
+    ```
+  </Step>
+</Steps>
+
+## OIDC ID Token Flow
+
+The Apple and Google flows are single-step. The client obtains an ID token directly from the provider and exchanges it for a Supabase session in one call.
+
+```python
+from exegia.auth.signin import sign_in_with_id_token
+
+result = sign_in_with_id_token(
+    provider="google",  # or "apple"
+    token="<oidc_id_token_from_provider>",
+    access_token="<provider_access_token>",  # optional
+    nonce="<nonce>",  # required for Apple
+)
+
+if result.ok:
+    user = result.current_user
+    session = result.session
+```
+
+## SignInResult Fields
+
+<ResponseField name="ok" type="bool">
+  `True` when the user is authenticated **and** has a `public.users` record. This is the only fully successful state.
+</ResponseField>
+
+<ResponseField name="current_user" type="CurrentUser | None">
+  The combined auth identity and application profile. Set only when `ok` is `True`. Contains `id`, `email`, `is_anonymous`, `is_permanent`, `has_profile`, and `providers`.
+</ResponseField>
+
+<ResponseField name="session" type="Session | None">
+  The Supabase session (access and refresh tokens). Present both on success and on the `needs_signup` path, so the caller can pass `session.access_token` to `sign_up()` without re-authenticating.
+</ResponseField>
+
+<ResponseField name="message" type="str | None">
+  A user-facing message. Set on all non-`ok` paths, including `needs_signup`.
+</ResponseField>
+
+<ResponseField name="needs_signup" type="bool">
+  `True` when the provider authenticated the user but no `public.users` record was found. Offer registration rather than a sign-in error.
+</ResponseField>
+
+## Function Reference
+
+### `request_email_otp`
+
+<ParamField path="email" type="str" required>
+  Destination email address to send the OTP or magic link to.
+</ParamField>
+
+<ParamField path="email_redirect_to" type="str">
+  URL to redirect the user to after they click the magic link. Optional.
+</ParamField>
+
+<ParamField path="should_create_user" type="bool">
+  Whether to create a new `auth.users` record when the email is not yet registered. Defaults to the project setting when omitted. Optional.
+</ParamField>
+
+<ParamField path="captcha_token" type="str">
+  CAPTCHA verification token. Required when CAPTCHA protection is enabled on the Supabase project. Optional.
+</ParamField>
+
+### `verify_email_otp`
+
+<ParamField path="email" type="str" required>
+  The email address the OTP was sent to. Must match the address used in `request_email_otp`.
+</ParamField>
+
+<ParamField path="token" type="str" required>
+  The 6-digit one-time code the user received by email.
+</ParamField>
+
+<ParamField path="captcha_token" type="str">
+  CAPTCHA verification token. Optional.
+</ParamField>
+
+### `sign_in_with_id_token`
+
+<ParamField path="provider" type="IdTokenProvider" required>
+  The OIDC provider that issued the token. Must be `"apple"` or `"google"`. GitHub is not supported via this flow (use OAuth identity linking instead).
+</ParamField>
+
+<ParamField path="token" type="str" required>
+  The OIDC ID token (JWT) returned by the provider's native sign-in SDK.
+</ParamField>
+
+<ParamField path="access_token" type="str">
+  Optional provider access token. Some providers require this to fetch additional profile details. Optional.
+</ParamField>
+
+<ParamField path="nonce" type="str">
+  The raw nonce used when requesting the ID token from the provider. Apple sign-in typically requires this to be supplied. Optional.
+</ParamField>
+
+<ParamField path="captcha_token" type="str">
+  CAPTCHA verification token. Optional.
+</ParamField>
+
+## Error Handling
+
+Both `verify_email_otp` and `sign_in_with_id_token` raise `AuthApiError` when the provider rejects the request — for example, when a code has expired or a token is malformed. Catch this at the call site to surface a clean error to the user.
+
+```python
+from supabase_auth import AuthApiError
+
+try:
+    result = verify_email_otp(email="user@example.com", token="123456")
+except AuthApiError as e:
+    # Token is invalid or has expired
+    print(e)
+```
+
+<Note>
+  If `result.needs_signup` is `True`, the user authenticated successfully but has no `public.users` record. The session is still available on `result.session`. Pass `result.session.access_token` to `sign_up()` to complete registration without requiring the user to sign in again.
+</Note>

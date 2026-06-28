@@ -1,0 +1,116 @@
+---
+title: "Recommended AI Workflow for Corpus Exploration"
+sidebarTitle: "AI Workflow"
+description: "The recommended sequence for AI agents to explore a Context Fabric corpus: discover structure, browse features, learn syntax, count, retrieve, and read."
+---
+
+When an AI assistant first connects to the `cf-mcp` server, it receives an instruction that outlines the recommended exploration sequence. Following this six-step workflow prevents wasted calls, avoids fetching unexpectedly large result sets, and ensures the agent builds up enough context about the corpus structure before querying it.
+
+## The Recommended Workflow
+
+<Steps>
+  <Step title="Understand Corpus Structure">
+    Call `describe_corpus()` first. It returns the section hierarchy, total feature count, and every node type with its population count — giving the agent a complete map of what is in the corpus before any queries are run.
+
+    ```
+    Section hierarchy: book > chapter > verse
+    Total features: 80
+
+    Node types:
+    Type                       Count
+    ----------------------------------
+    word               426,584
+    verse               23,213
+    chapter              1,189
+    book                    39
+    ```
+
+    The section hierarchy tells the agent how references like `"Genesis 1:1"` are structured, and the node type counts show the relative size of each level.
+  </Step>
+
+  <Step title="Browse Available Features">
+    Call `list_features()` to see all annotation dimensions available for querying. Filter by node type to keep the list focused:
+
+    ```
+    list_features(node_type="word", limit=30)
+    ```
+
+    This returns feature names like `lex`, `pos`, `gloss`, `gn`, `nu`, `st`, `vs`, `vt`, `sp`, `pdp`, and others — the vocabulary of conditions the agent can use inside a search template.
+  </Step>
+
+  <Step title="Learn the Query Syntax">
+    Call `search_syntax_guide()` for full inline documentation, or request a specific section to keep the context window lean:
+
+    ```
+    search_syntax_guide(section="examples")
+    ```
+
+    Available sections are `nodes`, `relations`, `quantifiers`, and `examples`. Skipping this step before crafting a complex template is the most common cause of malformed queries.
+  </Step>
+
+  <Step title="Check Result Scale">
+    Before fetching any result tuples, estimate the size of the result set with `return_type="count"`. This is a fast operation — the corpus engine runs the query but returns only the total:
+
+    ```
+    search(template="word pos=verb", return_type="count")
+    # Returns: Total results: 72,471
+    ```
+
+    Use this count to decide whether to paginate, narrow the template with additional conditions, or export to CSV instead.
+  </Step>
+
+  <Step title="Retrieve Paginated Results">
+    Use `return_type="results"` to get the first page of node tuples. The response includes a `cursor_id` that can be passed to `search_continue()` to walk through the full result set page by page:
+
+    ```
+    search(template="word pos=verb", return_type="results", limit=20)
+    # Returns results 1–20 and: cursor_id: abc-123...
+
+    search_continue(cursor_id="abc-123", limit=20)
+    # Returns results 21–40
+    ```
+
+    Each call to `search_continue()` advances the cursor and reports how many results remain.
+  </Step>
+
+  <Step title="Read Passage Text">
+    Use `get_passages()` to retrieve the rendered text for any section references returned by the search. Pass an explicit `fmt` to select a specific text encoding — omitting it uses the corpus default:
+
+    ```
+    get_passages(references=["Genesis 1:1", "John 3:16"], fmt="text-orig-full")
+    ```
+
+    References follow the `"Book Chapter:Verse"` pattern. The tool resolves each reference to a corpus node and returns the formatted text.
+  </Step>
+</Steps>
+
+## Quick Reference
+
+```
+describe_corpus()      →  understand node types and section hierarchy
+list_features()        →  see annotation dimensions available for search
+search_syntax_guide()  →  learn the query language
+search(..., "count")   →  estimate result size before fetching
+search(..., "results") →  get paginated node tuples with a cursor_id
+search_continue()      →  page through large result sets
+get_passages()         →  read the actual rendered text
+```
+
+## Return Types for search()
+
+The `search()` tool supports four `return_type` values, each suited to a different stage of the workflow:
+
+| `return_type` | What it returns |
+|---|---|
+| `results` | Node tuples with section refs and a `cursor_id` for pagination |
+| `count` | Total result count as a formatted number |
+| `statistics` | Node type breakdown of all matched nodes |
+| `passages` | Rendered text for the first N matches |
+
+## Cursor TTL
+
+Cursors created by `search()` expire after **5 minutes** of inactivity. The server automatically purges expired cursors before each new `search()` or `search_continue()` call. If a cursor has expired, `search_continue()` returns `"Cursor expired or not found. Run search() again."` — simply re-run the original `search()` to get a fresh cursor.
+
+<Warning>
+  Always check result count with `return_type="count"` before requesting `return_type="results"` on an unfamiliar template. Large corpora can return millions of results, and fetching all of them page by page may be impractical.
+</Warning>
