@@ -1,5 +1,5 @@
 ---
-title: "Context Fabric MCP Server: 11 Corpus Tools for AI"
+title: "Context-Fabric MCP Server: All 11 Corpus Tools Listed"
 sidebarTitle: "Overview"
 description: "The cf-mcp server exposes 11 tools to AI assistants via the Model Context Protocol. Start it with a corpus path; connect any MCP-compatible client."
 ---
@@ -59,16 +59,16 @@ mcp.run(transport="sse", host="localhost", port=8000)
 `corpus_manager.load()` resolves the path, loads the corpus via Context-Fabric, and registers it as the default. Calling `mcp.run()` blocks and serves requests until the process is terminated.
 
 <CardGroup cols={2}>
-  <Card title="Transports" icon="plug" href="/mcp/transports">
+  <Card title="Transports" icon="plug" href="mcp/transports">
     stdio, SSE, and streamable HTTP — when to use each and how to configure them.
   </Card>
-  <Card title="Multi-Corpus" icon="layer-group" href="/mcp/multi-corpus">
+  <Card title="Multi-Corpus" icon="layer-group" href="mcp/multi-corpus">
     Load multiple named corpora in one server session and switch between them.
   </Card>
-  <Card title="AI Workflow" icon="route" href="/mcp/workflow">
+  <Card title="AI Workflow" icon="route" href="mcp/workflow">
     The recommended six-step sequence for AI agents exploring a corpus.
   </Card>
-  <Card title="Search Tool" icon="magnifying-glass" href="/api/tools/search">
+  <Card title="Search Tool" icon="magnifying-glass" href="api/tools/search">
     Full reference for the `search()` tool and its return types.
   </Card>
 </CardGroup>

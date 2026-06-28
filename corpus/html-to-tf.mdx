@@ -1,7 +1,7 @@
 ---
-title: "Convert HTML Documents to Text-Fabric Datasets"
+title: "Transform HTML Document Directories to Text-Fabric"
 sidebarTitle: "HTML to TF"
-description: "convert_html_to_tf() converts a directory of HTML files into a Text-Fabric dataset with document→element→word nodes, with an advanced mode for semantic structure."
+description: "convert_html_to_tf() turns HTML files into a Text-Fabric dataset. Basic mode yields document→element→word nodes; advanced mode promotes semantic elements."
 ---
 
 The `convert_html_to_tf` function converts a directory of `.html` or `.htm` files into a Text-Fabric dataset. It supports two modes: a basic mode that produces a flat `document → element → word` hierarchy, and an advanced mode that promotes semantic block elements — paragraphs, links, and tables — to distinct, queryable node types. Both modes store HTML attributes as TF features on every node.
@@ -10,16 +10,17 @@ The `convert_html_to_tf` function converts a directory of `.html` or `.htm` file
 
 **Basic mode** (default, `advanced=False`) — all HTML tags become generic `element` nodes:
 
-```
+```text
 document
   element      (any HTML tag)
     word       (slot)
 ```
 
-**Advanced mode** (`advanced=True`) — semantic elements get their own node types:
+**Advanced mode** (`advanced=True`) — semantic elements get their own node types; all other HTML tags still become generic `element` nodes:
 
-```
+```text
 document
+  element      (non-semantic HTML tags)
   paragraph    (p, div, section, article)
   link         (a)
   table

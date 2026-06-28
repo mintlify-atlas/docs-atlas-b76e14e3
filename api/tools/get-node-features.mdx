@@ -1,7 +1,7 @@
 ---
 title: "get_node_features(): Batch feature lookup by node ID"
 sidebarTitle: "get_node_features"
-description: "Looks up named feature values for a list of integer node IDs. Returns a formatted table with node ID, section reference, and one column per feature. Max 100 nodes."
+description: "Batch lookup of feature values for up to 100 node IDs. Returns a formatted table with node ID, section reference, and one column per requested feature."
 ---
 
 `get_node_features()` performs a batch lookup of feature values for a set of node IDs that you already have — typically collected from `search()` results or a CSV export. You specify which features you want as columns, and the tool returns a fixed-width table with the node ID, its section reference, and one column per feature. Use this to enrich a list of nodes with linguistic or structural annotation without running a new search. Maximum **100 nodes** per call.

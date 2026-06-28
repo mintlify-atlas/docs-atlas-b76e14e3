@@ -1,14 +1,14 @@
 ---
-title: "Packaging Corpora as Distributable .exg Files"
+title: "Create Distributable .exg Archives from TF Datasets"
 sidebarTitle: ".exg Format"
-description: "The .exg format packages a Text-Fabric dataset into a single distributable zip archive with manifest.json, index.json, a git history stub, and the compressed corpus."
+description: "The .exg format bundles a Text-Fabric dataset into a distributable zip containing manifest.json, index.json, a git history stub, and a corpus.exgc file."
 ---
 
 The `.exg` format is a zip archive that bundles a Text-Fabric dataset with structured metadata for distribution and future versioning. Inside the archive you will find a `manifest.json` with rich corpus metadata extracted from `otext.tf` and `otype.tf`, an `index.json` listing every `.tf` file with its size, an empty git repository reserved for future diff and versioning features, and a `corpus.exgc` file which is the compressed TF dataset itself.
 
 ## Archive Layout
 
-```
+```text
 {name}.exg          (zip archive)
 ├── manifest.json   (corpus metadata extracted from otext.tf / otype.tf)
 ├── index.json      (list of .tf files with sizes)
@@ -97,9 +97,10 @@ The manifest is extracted automatically from the TF file headers. All fields are
 | `section_features` | `otext.tf @sectionFeatures` | Section feature names (comma-separated, split to list) |
 | `text_formats` | `otext.tf @fmt:*` | Available text format templates keyed by format name |
 | `node_types` | `otype.tf` data section | List of unique node types in order of appearance |
+| `source_folder` | Filesystem | Name of the source dataset directory |
 | `tf_file_count` | Filesystem scan | Number of `.tf` files in the dataset |
 | `total_size_bytes` | Filesystem scan | Total size of all files in the dataset directory |
 
 <Note>
-  The `.exg` packaging step requires `git` to be installed and available on `PATH`. The `git init` call will raise `subprocess.CalledProcessError` if git is missing.
+  The `.exg` packaging step requires `git` to be installed and available on `PATH`. If `git` is not found, the `git init` call raises `FileNotFoundError`. If `git` is present but the init command fails, it raises `subprocess.CalledProcessError`.
 </Note>

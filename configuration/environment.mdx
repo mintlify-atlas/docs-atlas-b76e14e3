@@ -26,9 +26,9 @@ This means you can maintain separate credential sets for each environment withou
 
 | Variable | Required | Description |
 |---|---|---|
-| `SUPABASE_URL` | Auth only | Supabase project URL (e.g. `https://<ref>.supabase.co`) |
+| `SUPABASE_URL` | Auth only | Supabase project URL (e.g. `https://<ref>.supabase.co`). Stored in `settings.supabase_url`; for local OrbStack setups the internal client URL is constructed from `PROJECT_REF` instead. |
 | `SUPABASE_ANON_KEY` | Auth only | Public/anonymous API key for client-side operations |
-| `SUPABASE_SERVICE_ROLE_KEY` | Auth only | Service-role key used by the server-side client (bypasses RLS) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Auth only | Service-role key used by the server-side client (bypasses RLS). Maps to `SUPABASE_SECRET_KEY` in the Settings class. |
 | `SUPABASE_STORAGE_BUCKET` | Auth only | Storage bucket name for file uploads |
 | `DATABASE_URL` | Auth only | Full PostgreSQL connection URL |
 | `DATASETS_BASE_PATH` | Optional | Base directory path for local dataset files |

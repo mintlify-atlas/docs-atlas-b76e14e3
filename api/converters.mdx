@@ -123,10 +123,16 @@ document
 
 ```
 document
-  └─ paragraph | link | table
-       └─ row
-            └─ cell
-                 └─ word  (slot)
+  ├─ paragraph           (from p, div, section, article)
+  │    └─ word  (slot)
+  ├─ link                (from a)
+  │    └─ word  (slot)
+  ├─ table
+  │    └─ row
+  │         └─ cell
+  │              └─ word  (slot)
+  └─ element             (all other tags)
+       └─ word  (slot)
 ```
 
 <ParamField path="input_dir" type="str | Path" required>

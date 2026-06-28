@@ -1,7 +1,7 @@
 ---
-title: "Recommended AI Workflow for Corpus Exploration"
+title: "Recommended AI Workflow for Context-Fabric Exploration"
 sidebarTitle: "AI Workflow"
-description: "The recommended sequence for AI agents to explore a Context Fabric corpus: discover structure, browse features, learn syntax, count, retrieve, and read."
+description: "The recommended sequence for AI agents to explore a Context-Fabric corpus: discover structure, browse features, learn syntax, count, retrieve, and read."
 ---
 
 When an AI assistant first connects to the `cf-mcp` server, it receives an instruction that outlines the recommended exploration sequence. Following this six-step workflow prevents wasted calls, avoids fetching unexpectedly large result sets, and ensures the agent builds up enough context about the corpus structure before querying it.
@@ -12,7 +12,7 @@ When an AI assistant first connects to the `cf-mcp` server, it receives an instr
   <Step title="Understand Corpus Structure">
     Call `describe_corpus()` first. It returns the section hierarchy, total feature count, and every node type with its population count — giving the agent a complete map of what is in the corpus before any queries are run.
 
-    ```
+    ```text
     Section hierarchy: book > chapter > verse
     Total features: 80
 
@@ -31,7 +31,7 @@ When an AI assistant first connects to the `cf-mcp` server, it receives an instr
   <Step title="Browse Available Features">
     Call `list_features()` to see all annotation dimensions available for querying. Filter by node type to keep the list focused:
 
-    ```
+    ```text
     list_features(node_type="word", limit=30)
     ```
 
@@ -41,7 +41,7 @@ When an AI assistant first connects to the `cf-mcp` server, it receives an instr
   <Step title="Learn the Query Syntax">
     Call `search_syntax_guide()` for full inline documentation, or request a specific section to keep the context window lean:
 
-    ```
+    ```text
     search_syntax_guide(section="examples")
     ```
 
@@ -51,7 +51,7 @@ When an AI assistant first connects to the `cf-mcp` server, it receives an instr
   <Step title="Check Result Scale">
     Before fetching any result tuples, estimate the size of the result set with `return_type="count"`. This is a fast operation — the corpus engine runs the query but returns only the total:
 
-    ```
+    ```text
     search(template="word pos=verb", return_type="count")
     # Returns: Total results: 72,471
     ```
@@ -62,7 +62,7 @@ When an AI assistant first connects to the `cf-mcp` server, it receives an instr
   <Step title="Retrieve Paginated Results">
     Use `return_type="results"` to get the first page of node tuples. The response includes a `cursor_id` that can be passed to `search_continue()` to walk through the full result set page by page:
 
-    ```
+    ```text
     search(template="word pos=verb", return_type="results", limit=20)
     # Returns results 1–20 and: cursor_id: abc-123...
 
@@ -76,7 +76,7 @@ When an AI assistant first connects to the `cf-mcp` server, it receives an instr
   <Step title="Read Passage Text">
     Use `get_passages()` to retrieve the rendered text for any section references returned by the search. Pass an explicit `fmt` to select a specific text encoding — omitting it uses the corpus default:
 
-    ```
+    ```text
     get_passages(references=["Genesis 1:1", "John 3:16"], fmt="text-orig-full")
     ```
 
@@ -86,7 +86,7 @@ When an AI assistant first connects to the `cf-mcp` server, it receives an instr
 
 ## Quick Reference
 
-```
+```text
 describe_corpus()      →  understand node types and section hierarchy
 list_features()        →  see annotation dimensions available for search
 search_syntax_guide()  →  learn the query language

@@ -1,7 +1,7 @@
 ---
-title: "Installing corpora-py and Its Dependencies"
+title: "corpora-py Installation: System Requirements and CLI Setup"
 sidebarTitle: "Installation"
-description: "Install the corpora-py package with uv or pip, configure your environment variables, and verify the cf-mcp CLI is available."
+description: "Install the corpora-py package with uv or pip, configure environment variables, and verify the cf-mcp CLI entry point is available."
 ---
 
 `corpora-py` is a standard Python package published to PyPI. It requires Python 3.13 or later and ships a CLI entry point (`cf-mcp`) that you can run immediately after installation. This page covers system requirements, installation methods, environment variable configuration, and how to install from source for development.
@@ -59,6 +59,7 @@ If you installed with `pip` into an active virtual environment, run `cf-mcp --he
 | `pydantic-settings` | >=2.0.0 | Environment-based configuration |
 | `ebooklib` | >=0.18 | EPUB parsing for book import |
 | `beautifulsoup4` | >=4.12.0 | HTML parsing for book import |
+| `python-dotenv` | >=1.0.0 | `.env` file loading |
 | `supabase` | >=2.31.0 | Auth and storage backend |
 
 ## Environment Setup

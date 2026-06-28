@@ -81,7 +81,7 @@ if result.ok:
 </ResponseField>
 
 <ResponseField name="needs_signup" type="bool">
-  `True` when the provider authenticated the user but no `public.users` record was found. Offer registration rather than a sign-in error.
+  `True` when the provider authenticated the user but no `public.users` record was found. Defaults to `False`. Offer registration rather than a sign-in error.
 </ResponseField>
 
 ## Function Reference
@@ -121,7 +121,7 @@ if result.ok:
 ### `sign_in_with_id_token`
 
 <ParamField path="provider" type="IdTokenProvider" required>
-  The OIDC provider that issued the token. Must be `"apple"` or `"google"`. GitHub is not supported via this flow (use OAuth identity linking instead).
+  The OIDC provider that issued the token. `IdTokenProvider` is a `Literal["apple", "google"]` type from `exegia.supabase.authentication`. GitHub is not supported via this flow — use the OAuth identity-linking flow for GitHub instead.
 </ParamField>
 
 <ParamField path="token" type="str" required>
@@ -142,7 +142,7 @@ if result.ok:
 
 ## Error Handling
 
-Both `verify_email_otp` and `sign_in_with_id_token` raise `AuthApiError` when the provider rejects the request — for example, when a code has expired or a token is malformed. Catch this at the call site to surface a clean error to the user.
+Both `verify_email_otp` and `sign_in_with_id_token` raise `AuthApiError` (from `supabase_auth`) when the provider rejects the request — for example, when a code has expired or a token is malformed. Catch this at the call site to surface a clean error to the user.
 
 ```python
 from supabase_auth import AuthApiError

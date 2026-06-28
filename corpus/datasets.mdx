@@ -1,7 +1,7 @@
 ---
-title: "Corpus Datasets: Supported Texts and Storage Layout"
+title: "Corpus Datasets: Storage Layout and Supported Types"
 sidebarTitle: "Datasets"
-description: "Context Fabric supports biblical, religious, and custom text corpora as Text-Fabric datasets stored locally under ~/.exegia/datasets/. Learn the layout and supported types."
+description: "Context Fabric stores corpora as Text-Fabric datasets. Learn the directory layout, required otext.tf and otype.tf files, and the BookCategory enum values."
 ---
 
 Corpora in Context Fabric are Text-Fabric dataset directories stored on your local filesystem. The MCP server loads one or more of these directories at startup from the path(s) you provide via the `--corpus` flag or the programmatic `corpus_manager.load()` call. Each dataset is a self-contained folder of annotated `.tf` feature files that the graph engine indexes at load time.
@@ -19,7 +19,7 @@ All other `.tf` files in the directory are feature files that store annotations 
 
 Organise datasets by category under `~/.exegia/datasets/` for clarity. Context Fabric does not enforce this structure, but it makes multi-corpus setups easy to manage:
 
-```
+```text
 ~/.exegia/datasets/
 ├── bibles/
 │   ├── BHSA/           # BHS Hebrew with Annotations

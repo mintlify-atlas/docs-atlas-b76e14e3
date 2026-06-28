@@ -12,7 +12,7 @@ Context Fabric splits authentication into two layers that work together:
 
 **`exegia.supabase` — low-level layer**
 
-- `client.py` creates a single synchronous Supabase client using the service-role key. Because the service-role key bypasses Row Level Security, all database operations in this layer run with elevated permissions regardless of the calling user's session.
+- `client.py` creates a single synchronous Supabase client using the service-role key and the `SUPABASE_API_URL` constant (constructed from `PROJECT_REF`). Because the service-role key bypasses Row Level Security, all database operations in this layer run with elevated permissions regardless of the calling user's session.
 - `authentication.py` provides typed wrappers around `supabase.auth.*` methods, translating raw credentials into structured `AuthResponse`, `AuthOtpResponse`, and `OAuthResponse` objects from `supabase_auth`.
 
 **`exegia.auth` — high-level layer**
@@ -53,7 +53,7 @@ All sign-in functions return a `SignInResult`. The `sign_up()` function returns 
 </ResponseField>
 
 <ResponseField name="needs_signup" type="bool">
-  `True` when the user authenticated successfully but has no `public.users` record yet.
+  `True` when the user authenticated successfully but has no `public.users` record yet. Defaults to `False`.
 </ResponseField>
 
 **`SignUpResult`**
@@ -75,14 +75,23 @@ All sign-in functions return a `SignInResult`. The `sign_up()` function returns 
 </ResponseField>
 
 <ResponseField name="already_registered" type="bool">
-  `True` when the user already has a `public.users` record, so no new record was created.
+  `True` when the user already has a `public.users` record, so no new record was created. Defaults to `False`.
 </ResponseField>
 
 ## CurrentUser Dataclass
 
-`CurrentUser` is the unified view of a signed-in user. It wraps the `auth.users` identity (a `supabase_auth.User`) and the `public.users` profile row.
+`CurrentUser` is the unified view of a signed-in user. It is a frozen dataclass with two fields that wrap the `auth.users` identity (a `supabase_auth.User`) and the `public.users` profile row, plus a set of convenience properties.
+
+**Dataclass fields**
 
 | Field | Type | Description |
+|---|---|---|
+| `auth_user` | `User` | The Supabase Auth user object (`auth.users` row) |
+| `profile` | `dict[str, Any] \| None` | The `public.users` record, or `None` when no profile exists yet |
+
+**Properties**
+
+| Property | Type | Description |
 |---|---|---|
 | `id` | `str` | Auth user UUID — also the `public.users` primary key |
 | `email` | `str \| None` | User email from the auth identity |
@@ -91,12 +100,14 @@ All sign-in functions return a `SignInResult`. The `sign_up()` function returns 
 | `has_profile` | `bool` | Whether a `public.users` record was found |
 | `providers` | `list[str]` | List of linked OAuth provider identifiers, e.g. `["google"]` |
 
+Call `has_provider(provider: str) -> bool` to check whether a specific provider is already linked to the user.
+
 ## Configuration Required
 
-The Supabase client is created at import time using two environment variables. Both must be set before importing any `exegia.auth` or `exegia.supabase` module:
+The Supabase client is created at import time using two constants resolved from environment variables. Both must be set before importing any `exegia.auth` or `exegia.supabase` module:
 
-- `SUPABASE_URL` — your Supabase project URL
-- `SUPABASE_SECRET_KEY` / `SUPABASE_SERVICE_ROLE_KEY` — service-role key that bypasses RLS
+- `PROJECT_REF` — your Supabase project reference, used to construct `SUPABASE_API_URL` as `https://supabase_kong_{PROJECT_REF}.orb.local`
+- `SUPABASE_SECRET_KEY` — service-role key that bypasses RLS
 
 See [Environment Variables](/configuration/environment) for the full list and setup instructions.
 

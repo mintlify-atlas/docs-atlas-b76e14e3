@@ -50,7 +50,7 @@ from exegia.utils.constant import (
 
 ## Settings Class Fields
 
-The `Settings` class extends `pydantic_settings.BaseSettings`. Fields map directly to environment variable names.
+The `Settings` class extends `pydantic_settings.BaseSettings`. Fields map directly to environment variable names (field names are lowercase; env variable names are uppercase).
 
 | Field | Type | Env Variable | Default |
 |---|---|---|---|
@@ -60,9 +60,15 @@ The `Settings` class extends `pydantic_settings.BaseSettings`. Fields map direct
 | `supabase_secret_key` | `str` | `SUPABASE_SECRET_KEY` | `""` |
 | `project_ref` | `str` | `PROJECT_REF` | `""` |
 | `supabase_db_url` | `str` | `SUPABASE_DB_URL` | `""` |
+| `supabase_db_password` | `str` | `SUPABASE_DB_PASSWORD` | `""` |
+| `supabase_db_user` | `str` | `SUPABASE_DB_USER` | `""` |
+| `supabase_storage_access_key` | `str` | `SUPABASE_STORAGE_ACCESS_KEY` | `""` |
+| `supabase_storage_secret_key` | `str` | `SUPABASE_STORAGE_SECRET_KEY` | `""` |
 | `environment` | `str` | `ENVIRONMENT` | `"development"` |
 | `cors_origins` | `str` | `CORS_ORIGINS` | `""` |
 | `open_ai_key` | `str` | `OPENAI_KEY` | `""` |
+| `development_team` | `str` | `DEVELOPMENT_TEAM` | `""` |
+| `apple_team_id` | `str` | `APPLE_TEAM_ID` | `""` |
 
 ## `cors_origins_list` Property
 
@@ -80,7 +86,7 @@ An empty or unset `CORS_ORIGINS` returns an empty list.
 
 ## Local Supabase with OrbStack
 
-When running Supabase locally using OrbStack, `SUPABASE_URL` is not read from the environment directly for internal routing. Instead, the `SUPABASE_API_URL` constant and database host are constructed automatically from `PROJECT_REF`:
+When running Supabase locally using OrbStack, `SUPABASE_URL` is not used by the internal client. Instead, the `SUPABASE_API_URL` constant and database host are constructed automatically from `PROJECT_REF`:
 
 - **API (Kong gateway):** `https://supabase_kong_{PROJECT_REF}.orb.local`
 - **Database host:** `supabase_db_{PROJECT_REF}.orb.local`

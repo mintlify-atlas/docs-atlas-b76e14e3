@@ -29,7 +29,7 @@ A string with one block per reference, separated by blank lines. Each block begi
 בְּרֵאשִׁ֖ית בָּרָ֣א אֱלֹהִ֑ים אֵ֥ת הַשָּׁמַ֖יִם וְאֵ֥ת הָאָֽרֶץ׃
 ```
 
-When a reference cannot be parsed, the block reads `[ref] — could not parse reference`. When a valid reference is not found in the corpus, the block reads `[ref] — not found in corpus`. Returns `"No passages found."` if the `references` list is empty or all references fail.
+When a reference cannot be parsed, the block reads `[ref] — could not parse reference`. When a parsed reference causes an error during section lookup (e.g. the section type is not addressable), the block reads `[ref] — section not found`. When the reference is valid but resolves to no node, the block reads `[ref] — not found in corpus`. Returns `"No passages found."` if the `references` list is empty or all references fail.
 
 ## Example
 

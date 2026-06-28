@@ -1,7 +1,7 @@
 ---
-title: "Fetch Text-Fabric Datasets from a Git Repository"
+title: "Extract Text-Fabric Datasets from a Git Repository"
 sidebarTitle: "Fetch from Git"
-description: "Use fetch_datasets_from_git() to shallow-clone a git repository and automatically locate all Text-Fabric dataset directories containing otext.tf and otype.tf."
+description: "Use fetch_datasets_from_git() to shallow-clone a repo and find every Text-Fabric dataset directory containing otext.tf and otype.tf."
 ---
 
 `fetch_datasets_from_git` shallow-clones a git repository into a temporary directory, recursively scans it for Text-Fabric dataset directories (any folder containing both `otext.tf` and `otype.tf` side by side), and returns the list of matching paths. This is the fastest way to pull a public corpus — such as the ETCBC Hebrew Bible — onto your machine without manually navigating the repository layout.

@@ -1,5 +1,5 @@
 ---
-title: "list_features(): Browse available features"
+title: "list_features(): Browse and filter corpus feature names"
 sidebarTitle: "list_features"
 description: "Lists corpus features with optional filtering by node type or kind. Returns up to 50 names by default with a truncation notice when more exist."
 ---
@@ -26,7 +26,7 @@ description: "Lists corpus features with optional filtering by node type or kind
 
 ## Returns
 
-A formatted string beginning with `"Features:"` followed by the matching feature names, one per line, indented by two spaces. When the total number of matching features exceeds `limit`, a `(showing N of M)` suffix is appended so you know more exist.
+A formatted string beginning with `"Features:"` followed by the matching feature names, one per line, indented by two spaces. When the total number of matching features exceeds `limit`, a `(showing N of M)` suffix is appended so you know more exist. Returns `"Could not retrieve feature list from this corpus."` if the corpus does not expose feature data.
 
 ```
 Features:

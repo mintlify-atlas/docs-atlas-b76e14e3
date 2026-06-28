@@ -53,7 +53,7 @@ session = response.session
 
 ## Create a Profile Directly
 
-`create_user_profile` inserts a row into `public.users` using the service-role client. It bypasses RLS and is used internally by `sign_up()`, but you can also call it directly if you need fine-grained control.
+`create_user_profile` inserts a row into `public.users` (table name from `USERS_TABLE = "users"`, keyed by `USERS_ID_COLUMN = "id"` from `exegia.auth.current_user`) using the service-role client. It bypasses RLS and is used internally by `sign_up()`, but you can also call it directly if you need fine-grained control.
 
 ```python
 from exegia.auth.signup import create_user_profile
@@ -102,7 +102,7 @@ oauth_response = link_identity_to_current_user(
 </ResponseField>
 
 <ResponseField name="already_registered" type="bool">
-  `True` when the user already has a `public.users` record. No new record is created and `current_user` reflects the existing profile.
+  `True` when the user already has a `public.users` record. Defaults to `False`. No new record is created and `current_user` reflects the existing profile.
 </ResponseField>
 
 ## `sign_up` Parameters

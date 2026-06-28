@@ -1,7 +1,7 @@
 ---
 title: "Authentication API: SignInResult, SignUpResult, CurrentUser"
 sidebarTitle: "Auth API"
-description: "Full reference for exegia.auth: sign_in_with_id_token, request_email_otp, verify_email_otp, sign_up, create_user_profile, get_current_user_record, and CurrentUser."
+description: "Python API reference for exegia.auth: sign-in and sign-up functions, the CurrentUser dataclass, and helper utilities for OTP and anonymous sessions."
 ---
 
 The `exegia.auth` module provides high-level authentication functions that wrap Supabase Auth and enforce the `public.users` profile check. Authentication (establishing an identity) and sign-up (provisioning the application profile row) are deliberately separate steps. All functions return typed frozen dataclasses so callers can branch on structured outcomes rather than catching exceptions for expected states.

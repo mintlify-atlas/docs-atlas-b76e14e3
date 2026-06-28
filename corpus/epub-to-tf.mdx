@@ -1,7 +1,7 @@
 ---
-title: "Convert EPUB Books to Text-Fabric Datasets"
+title: "Convert EPUB Ebooks to Queryable Text-Fabric Datasets"
 sidebarTitle: "EPUB to TF"
-description: "convert_epub_to_tf() converts any EPUB ebook into a Text-Fabric dataset with a book→chapter→element→paragraph→word node hierarchy, ready for MCP queries."
+description: "convert_epub_to_tf() converts any EPUB into a TF dataset with a book→chapter→element→paragraph→word node hierarchy, ready for Context Fabric MCP queries."
 ---
 
 The `convert_epub_to_tf` function converts EPUB files into queryable Text-Fabric datasets. It extracts EPUB metadata, walks the spine item by item, parses each page's HTML content into semantic nodes, and optionally tokenises the text into individual word slots. The result is a valid TF directory that can be loaded directly by the MCP server or any `cfabric`-compatible tool.
@@ -10,7 +10,7 @@ The `convert_epub_to_tf` function converts EPUB files into queryable Text-Fabric
 
 The converter maps every EPUB document into a five-level node hierarchy:
 
-```
+```text
 book
   chapter          (EPUB spine item / page)
     element        (block HTML element)
@@ -106,10 +106,13 @@ Every node in the output dataset carries one or more of the following features:
 | `chapter_index` | `chapter` | 0-based chapter index |
 | `chapter_id` | `chapter` | ID from EPUB spine |
 | `chapter_name` | `chapter` | Filename inside EPUB |
-| `tag` | `element`, `paragraph` | HTML tag name |
-| `class` | `element` | CSS class names |
+| `tag` | `element`, `paragraph`, `link`, `table`, `row`, `cell` | HTML tag name |
+| `class` | `element`, `paragraph`, `link`, `cell` | CSS class names |
+| `id` | `element`, `paragraph` | HTML `id` attribute |
 | `href` | `link` | Link URL |
-| `depth` | `element`, `paragraph` | Nesting depth in HTML |
+| `src` | `element` | Source URL (e.g. `<img>`) |
+| `alt` | `element` | Alt text (e.g. `<img>`) |
+| `depth` | `element`, `paragraph`, `link`, `table` | Nesting depth in HTML |
 | `text` | `word` | The word text |
 
 ## Class-Based Usage
